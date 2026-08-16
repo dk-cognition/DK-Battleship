@@ -84,7 +84,7 @@ public static class GolfCharacters
     public static GolfCharacter KyleStalder { get; } = new(
         name: "Kyle Stalder",
         title: "Weekend Regular",
-        description: "Out here for the beer cart and the sunshine. Sprays it everywhere and forgets which hole he was working.",
+        description: "Out here for the beer cart and the sunshine. Still working on fixing that slice.",
         avatar: "\U0001F3CC",
         strategyFactory: random => new HuntTargetAi("Kyle Stalder", random, AiSkill.Casual),
         expectedWinRate: 0.20,
