@@ -1,3 +1,5 @@
+const shortcuts = ["h", "v", "r"];
+
 let handler = null;
 
 export function register(target) {
@@ -8,12 +10,17 @@ export function register(target) {
             return;
         }
 
+        const key = event.key.toLowerCase();
+        if (!shortcuts.includes(key)) {
+            return;
+        }
+
         const tag = event.target?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || event.target?.isContentEditable) {
             return;
         }
 
-        target.invokeMethodAsync("HandleKey", event.key);
+        target.invokeMethodAsync("HandleKey", key);
     };
 
     window.addEventListener("keydown", handler);

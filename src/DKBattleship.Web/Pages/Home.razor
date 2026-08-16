@@ -63,7 +63,7 @@ else
                 Click the cell where the club starts, or press <kbd>H</kbd> to rotate it.
             </p>
             <div class="controls">
-                <button class="tee" @onclick="ToggleOrientation">Rotate (@(_orientation == Orientation.Horizontal ? "H" : "V"))</button>
+                <button class="tee" @onclick="ToggleOrientation">Rotate (H)</button>
                 <button class="tee ghost" @onclick="RandomPlacement">Let the caddie do it</button>
                 <button class="tee ghost" @onclick="BackToRoster">Change opponent</button>
             </div>
@@ -198,19 +198,21 @@ else
 
     public async ValueTask DisposeAsync()
     {
-        if (_keyboard is not null)
+        try
         {
-            try
+            if (_keyboard is not null)
             {
                 await _keyboard.InvokeVoidAsync("unregister");
                 await _keyboard.DisposeAsync();
             }
-            catch (JSDisconnectedException)
-            {
-            }
         }
-
-        _selfReference?.Dispose();
+        catch (JSDisconnectedException)
+        {
+        }
+        finally
+        {
+            _selfReference?.Dispose();
+        }
     }
 
     private void HoverCell(Coordinate coordinate) => _hover = coordinate;
