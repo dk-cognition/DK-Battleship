@@ -1,0 +1,347 @@
+:root {
+    --fairway: #2f7d4f;
+    --fairway-dark: #1f5637;
+    --rough: #1b3a29;
+    --sand: #e6d6a8;
+    --sand-dark: #cbb379;
+    --flag: #d13b3b;
+    --sky: #eaf4ec;
+    --ink: #12241a;
+    --white: #ffffff;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(180deg, var(--sky) 0%, #d8e9dc 100%);
+    color: var(--ink);
+    min-height: 100%;
+}
+
+h1, h2, h3 {
+    margin: 0 0 .25rem 0;
+    font-weight: 700;
+}
+
+a {
+    color: var(--fairway-dark);
+}
+
+.course {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1.25rem 1rem 2.5rem;
+}
+
+.clubhouse {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--fairway-dark);
+    color: var(--white);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .15);
+}
+
+.clubhouse .logo {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.clubhouse p {
+    margin: 0;
+    opacity: .85;
+    font-size: .95rem;
+}
+
+footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: .85rem;
+    opacity: .75;
+}
+
+footer span {
+    margin: 0 .4rem;
+}
+
+.panel {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    margin-top: 1.25rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .08);
+}
+
+.status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1.5rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.status .message {
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.scorecard {
+    display: flex;
+    gap: 1.25rem;
+    font-size: .9rem;
+}
+
+.scorecard div span {
+    font-weight: 700;
+    color: var(--fairway-dark);
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    margin-top: .75rem;
+}
+
+button.tee {
+    background: var(--fairway);
+    color: var(--white);
+    border: none;
+    border-radius: 999px;
+    padding: .5rem 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .05s ease, background .15s ease;
+}
+
+button.tee:hover {
+    background: var(--fairway-dark);
+}
+
+button.tee:active {
+    transform: translateY(1px);
+}
+
+button.tee.ghost {
+    background: transparent;
+    color: var(--fairway-dark);
+    border: 2px solid var(--fairway);
+}
+
+button.tee:disabled {
+    background: #b9c6bd;
+    cursor: not-allowed;
+}
+
+.characters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.character-card {
+    flex: 1 1 260px;
+    border: 2px solid var(--sand-dark);
+    border-radius: 12px;
+    padding: 1rem;
+    background: #fffdf5;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
+.character-card:hover, .character-card.selected {
+    border-color: var(--fairway);
+    box-shadow: 0 0 0 3px rgba(47, 125, 79, .15);
+}
+
+.character-card .avatar {
+    font-size: 2rem;
+}
+
+.character-card .title {
+    font-weight: 700;
+    color: var(--fairway-dark);
+}
+
+.boards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.board-wrap {
+    flex: 1 1 340px;
+}
+
+.board-wrap h3 {
+    display: flex;
+    align-items: baseline;
+    gap: .5rem;
+}
+
+.board-wrap h3 small {
+    font-weight: 500;
+    opacity: .7;
+}
+
+.grid {
+    display: grid;
+    gap: 2px;
+    background: var(--rough);
+    padding: 2px;
+    border-radius: 8px;
+    width: max-content;
+}
+
+.grid-row {
+    display: contents;
+}
+
+.cell {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 3px;
+    background: var(--fairway);
+    color: var(--white);
+    font-size: .85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: default;
+}
+
+.cell.label {
+    background: transparent;
+    color: var(--sand);
+    font-size: .7rem;
+    cursor: default;
+}
+
+.cell.clickable {
+    cursor: pointer;
+}
+
+.cell.clickable:hover {
+    outline: 2px solid var(--sand);
+    outline-offset: -2px;
+}
+
+.cell.ship {
+    background: #5a4632;
+}
+
+.cell.hit {
+    background: var(--flag);
+}
+
+.cell.miss {
+    background: var(--sand);
+    color: var(--rough);
+}
+
+.cell.preview {
+    background: #7bbf92;
+}
+
+.cell.preview.invalid {
+    background: #a94442;
+}
+
+.bag {
+    list-style: none;
+    padding: 0;
+    margin: .5rem 0 0;
+    font-size: .9rem;
+}
+
+.bag li {
+    display: flex;
+    justify-content: space-between;
+    max-width: 220px;
+    padding: .15rem 0;
+}
+
+.bag li.sunk {
+    text-decoration: line-through;
+    opacity: .55;
+}
+
+.log {
+    margin-top: .75rem;
+    max-height: 8rem;
+    overflow-y: auto;
+    font-size: .85rem;
+    border-left: 3px solid var(--sand-dark);
+    padding-left: .75rem;
+}
+
+.log p {
+    margin: .15rem 0;
+}
+
+.game-over {
+    text-align: center;
+}
+
+.game-over h2 {
+    font-size: 1.6rem;
+}
+
+.loading-progress {
+    position: relative;
+    display: block;
+    width: 6rem;
+    height: 6rem;
+    margin: 20vh auto 1rem auto;
+}
+
+.loading-progress circle {
+    fill: none;
+    stroke: #e0e0e0;
+    stroke-width: .6rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+
+.loading-progress circle:last-child {
+    stroke: var(--fairway);
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+    transition: stroke-dasharray .05s ease-in-out;
+}
+
+.loading-progress-text {
+    position: absolute;
+    text-align: center;
+    font-weight: bold;
+    inset: calc(20vh + 3.25rem) 0 auto 0;
+}
+
+.loading-progress-text:after {
+    content: var(--blazor-load-percentage-text, "Walking to the first tee...");
+}
+
+#blazor-error-ui {
+    background: var(--sand);
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, .2);
+    display: none;
+    left: 0;
+    padding: .6rem 1.25rem .7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: .75rem;
+    top: .5rem;
+}
