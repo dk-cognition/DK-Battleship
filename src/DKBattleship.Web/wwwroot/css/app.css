@@ -262,6 +262,7 @@ button.tee:disabled {
     width: 30px;
     height: 30px;
     border: none;
+    font-family: var(--body-font);
     border-radius: 3px;
     background: var(--fairway);
     color: var(--white);
