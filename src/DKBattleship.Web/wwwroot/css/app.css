@@ -234,6 +234,23 @@ button.tee:disabled {
     cursor: not-allowed;
 }
 
+.sound-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: .75rem;
+}
+
+button.tee.sound-toggle {
+    padding: .4rem .8rem;
+    font-size: .55rem;
+    background: var(--white);
+    box-shadow: 0 3px 0 var(--fairway-dark);
+}
+
+button.tee.sound-toggle:hover {
+    background: var(--sand);
+}
+
 .characters {
     display: flex;
     flex-wrap: wrap;
