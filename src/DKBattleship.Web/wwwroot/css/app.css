@@ -8,12 +8,14 @@
     --sky: #eaf4ec;
     --ink: #12241a;
     --white: #ffffff;
+    --arcade: "Press Start 2P", "Courier New", monospace;
+    --body-font: "Chakra Petch", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 html, body {
     margin: 0;
     padding: 0;
-    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--body-font);
     background: linear-gradient(180deg, var(--sky) 0%, #d8e9dc 100%);
     color: var(--ink);
     min-height: 100%;
@@ -21,7 +23,23 @@ html, body {
 
 h1, h2, h3 {
     margin: 0 0 .25rem 0;
-    font-weight: 700;
+    font-family: var(--arcade);
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: .02em;
+}
+
+h1 {
+    font-size: 1.9rem;
+    text-shadow: 3px 3px 0 var(--flag);
+}
+
+h2 {
+    font-size: 1.1rem;
+}
+
+h3 {
+    font-size: .9rem;
 }
 
 a {
@@ -51,9 +69,11 @@ a {
 }
 
 .clubhouse p {
-    margin: 0;
+    margin: .35rem 0 0;
     opacity: .85;
     font-size: .95rem;
+    text-transform: uppercase;
+    letter-spacing: .12em;
 }
 
 footer {
@@ -84,8 +104,9 @@ footer span {
 }
 
 .status .message {
-    font-size: 1.05rem;
-    font-weight: 600;
+    font-family: var(--arcade);
+    font-size: .8rem;
+    line-height: 1.6;
 }
 
 .scorecard {
@@ -95,7 +116,8 @@ footer span {
 }
 
 .scorecard div span {
-    font-weight: 700;
+    font-family: var(--arcade);
+    font-size: .8rem;
     color: var(--fairway-dark);
 }
 
@@ -111,8 +133,11 @@ button.tee {
     color: var(--white);
     border: none;
     border-radius: 999px;
-    padding: .5rem 1.1rem;
-    font-weight: 600;
+    padding: .6rem 1.1rem;
+    font-family: var(--arcade);
+    font-size: .65rem;
+    text-transform: uppercase;
+    box-shadow: 0 4px 0 var(--fairway-dark);
     cursor: pointer;
     transition: transform .05s ease, background .15s ease;
 }
@@ -122,7 +147,8 @@ button.tee:hover {
 }
 
 button.tee:active {
-    transform: translateY(1px);
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--fairway-dark);
 }
 
 button.tee.ghost {
@@ -163,7 +189,9 @@ button.tee:disabled {
 }
 
 .character-card .title {
-    font-weight: 700;
+    font-family: var(--arcade);
+    font-size: .7rem;
+    line-height: 1.5;
     color: var(--fairway-dark);
 }
 
@@ -175,10 +203,11 @@ button.tee:disabled {
 }
 
 .character-card .win-rate, .character-card .tees {
-    font-size: .8rem;
-    font-weight: 600;
+    font-family: var(--arcade);
+    font-size: .55rem;
+    text-transform: uppercase;
     border-radius: 999px;
-    padding: .15rem .6rem;
+    padding: .3rem .6rem;
 }
 
 .character-card .win-rate {
@@ -315,7 +344,8 @@ button.tee:disabled {
 }
 
 .game-over h2 {
-    font-size: 1.6rem;
+    font-size: 1.4rem;
+    text-shadow: 3px 3px 0 var(--sand-dark);
 }
 
 .loading-progress {

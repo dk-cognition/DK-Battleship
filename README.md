@@ -1,4 +1,4 @@
-# DK Battleship — Golf Edition ⛳
+# BattleGolf ⛳
 
 Battleship played with a bag of golf clubs, against an AI opponent, in the browser.
 
