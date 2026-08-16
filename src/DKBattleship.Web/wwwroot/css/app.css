@@ -5,7 +5,8 @@
     --sand: #e6d6a8;
     --sand-dark: #cbb379;
     --flag: #d13b3b;
-    --sky: #eaf4ec;
+    --sky: #dcf1d5;
+    --sky-deep: #bfe4bb;
     --ink: #12241a;
     --white: #ffffff;
     --arcade: "Press Start 2P", "Courier New", monospace;
@@ -17,9 +18,61 @@ html, body {
     margin: 0;
     padding: 0;
     font-family: var(--body-font);
-    background: linear-gradient(180deg, var(--sky) 0%, #d8e9dc 100%);
+    background: linear-gradient(180deg, var(--sky) 0%, var(--sky-deep) 100%);
+    background-attachment: fixed;
     color: var(--ink);
     min-height: 100%;
+}
+
+.driving-range {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Each layer is one tiled ball pattern; --tile is both the ball spacing and the
+   distance the layer travels per loop, so the pan is seamless. */
+.driving-range .field {
+    position: absolute;
+    inset: calc(var(--tile) * -2);
+    background-image:
+        radial-gradient(circle at 36% 32%, #ffffff 0 26%, #f6faf5 36%, #e2eee0 42%, #a8c0a9 46%, rgba(168, 192, 169, 0) 48%),
+        radial-gradient(circle at 36% 32%, #ffffff 0 26%, #f6faf5 36%, #e2eee0 42%, #a8c0a9 46%, rgba(168, 192, 169, 0) 48%);
+    background-size: var(--tile) var(--tile);
+    background-position: 0 0, calc(var(--tile) / 2) calc(var(--tile) / 2);
+    opacity: var(--layer-opacity);
+    will-change: transform;
+    animation: pan-left var(--pan) linear infinite;
+}
+
+.driving-range .field.near {
+    --tile: 24px;
+    --pan: 1.7s;
+    --layer-opacity: .9;
+}
+
+.driving-range .field.far {
+    --tile: 15px;
+    --pan: 2.6s;
+    --layer-opacity: .2;
+}
+
+@keyframes pan-left {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(calc(var(--tile) * -1), 0, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .driving-range .field {
+        animation: none;
+    }
 }
 
 h1, h2, h3 {
@@ -51,6 +104,8 @@ a {
 }
 
 .course {
+    position: relative;
+    z-index: 1;
     max-width: 1080px;
     margin: 0 auto;
     padding: 1.25rem 1rem 2.5rem;
