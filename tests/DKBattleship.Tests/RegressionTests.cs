@@ -72,6 +72,28 @@ public class RegressionTests
     }
 
     [Fact]
+    public void SinkingAClubWhereTwoClubsCross_KeepsTheNeighboursLead()
+    {
+        var board = new Board();
+        var iron = new Ship("Iron", 3);
+        var hybrid = new Ship("Hybrid", 3);
+        Assert.True(board.PlaceShip(iron, new Coordinate(0, 0), Orientation.Vertical));      // A1-A3
+        Assert.True(board.PlaceShip(hybrid, new Coordinate(2, 1), Orientation.Horizontal));  // B3-D3
+        var ai = new HuntTargetAi("Probe", new Random(2), AiSkill.Tour);
+
+        foreach (var cell in new[] { new Coordinate(0, 0), new Coordinate(1, 0), new Coordinate(2, 1), new Coordinate(2, 2) })
+        {
+            MatchSimulator.Fire(ai, board, cell);
+        }
+
+        // Sinking the iron here leaves runs of equal length on both axes through A3.
+        Assert.Equal(ShotResult.Sunk, MatchSimulator.Fire(ai, board, new Coordinate(2, 0)));
+        Assert.False(hybrid.IsSunk);
+        Assert.Equal(AiMode.Target, ai.Mode);
+        Assert.Contains(new Coordinate(2, 3), ai.TargetQueue);
+    }
+
+    [Fact]
     public void NextShot_NeverRepeatsWhenResultsAreNotRecordedYet()
     {
         var board = new Board();

@@ -188,42 +188,62 @@ public class HuntTargetAi : IAiPlayer
     /// </summary>
     private void ResolveSunkShip(Coordinate lastHit, int sunkClubSize)
     {
-        var horizontal = CollectRun(lastHit, 0, 1);
-        var vertical = CollectRun(lastHit, 1, 0);
-        var run = horizontal.Count >= vertical.Count ? horizontal : vertical;
-        var sunkCells = TrimToClubSize(run, lastHit, sunkClubSize);
+        var horizontalRun = CollectRun(lastHit, 0, 1);
+        var verticalRun = CollectRun(lastHit, 1, 0);
+        var horizontal = WindowForSunkClub(horizontalRun, lastHit, sunkClubSize);
+        var vertical = WindowForSunkClub(verticalRun, lastHit, sunkClubSize);
+
+        List<Coordinate> sunkCells;
+        if (horizontal is null || vertical is null)
+        {
+            sunkCells = horizontal ?? vertical ?? new List<Coordinate> { lastHit };
+        }
+        else if (horizontalRun.Count != verticalRun.Count)
+        {
+            // The axis whose run the club fills exactly is the club; the longer run spills into a
+            // neighbour's hits.
+            sunkCells = horizontalRun.Count == sunkClubSize ? horizontal
+                : verticalRun.Count == sunkClubSize ? vertical
+                : horizontalRun.Count > verticalRun.Count ? horizontal : vertical;
+        }
+        else
+        {
+            // Both axes could be the club that just dropped (clubs crossing at this cell). Resolving the
+            // wrong one throws away a live lead, so resolve only what they agree on and keep hunting the
+            // rest — a few wasted swings beats forgetting a wounded club.
+            sunkCells = horizontal.Intersect(vertical).ToList();
+        }
 
         foreach (var cell in sunkCells)
         {
             _openHits.Remove(cell);
         }
 
-        _remainingSizes.Remove(sunkCells.Count);
+        _remainingSizes.Remove(sunkClubSize > 0 ? sunkClubSize : sunkCells.Count);
     }
 
     /// <summary>
     /// Hits run straight through clubs lying end to end, so the run of hits can be longer than the club
-    /// that just dropped. Keep only the window of the sunk club's length that ends where the last swing
-    /// landed; the neighbouring hits stay open as leads.
+    /// that just dropped. Returns the window of exactly <paramref name="sunkClubSize"/> cells covering
+    /// the last swing, preferring one that butts against the end of the run (a sunk club's ends touch
+    /// water or the board edge, never another club's hits), or null when this axis cannot hold the club.
     /// </summary>
-    private List<Coordinate> TrimToClubSize(List<Coordinate> run, Coordinate lastHit, int sunkClubSize)
+    private static List<Coordinate>? WindowForSunkClub(List<Coordinate> run, Coordinate lastHit, int sunkClubSize)
     {
-        if (sunkClubSize <= 0 || sunkClubSize >= run.Count)
+        if (sunkClubSize <= 0)
         {
             return run;
         }
 
-        var lastHitIndex = run.IndexOf(lastHit);
-        var candidates = Enumerable
-            .Range(
-                Math.Max(0, lastHitIndex - sunkClubSize + 1),
-                Math.Min(sunkClubSize, run.Count - sunkClubSize + 1))
-            .Where(start => start <= lastHitIndex && start + sunkClubSize <= run.Count)
-            .ToList();
+        if (sunkClubSize > run.Count)
+        {
+            return null;
+        }
 
-        // Prefer a window butting up against the edge of the run: the sunk club's ends touch water or
-        // the board edge, never another club's hits.
-        var chosen = candidates
+        var lastHitIndex = run.IndexOf(lastHit);
+        var chosen = Enumerable
+            .Range(0, run.Count - sunkClubSize + 1)
+            .Where(start => start <= lastHitIndex && lastHitIndex < start + sunkClubSize)
             .OrderBy(start => (start > 0 ? 1 : 0) + (start + sunkClubSize < run.Count ? 1 : 0))
             .First();
 

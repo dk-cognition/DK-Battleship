@@ -63,7 +63,12 @@ now guards it.
   just sank, exactly like an opponent calling out "you sank my Putter". `HuntTargetAi` trims the run
   to a window of that length containing the last swing, preferring the window that butts up against
   the end of the run (a sunk club's ends touch water or the board edge, never another club's hits).
-- **Test:** `RegressionTests.SinkingAClubInLineWithAnother_LeavesTheNeighboursHitsOpen`.
+  When two clubs *cross* at the finishing cell, both axes hold an equally plausible window; the AI
+  then resolves only the cells the two windows agree on and keeps the rest as leads, because a few
+  wasted swings cost far less than forgetting a wounded club. The remaining-bag bookkeeping uses the
+  reported size rather than the number of cells it managed to attribute, so it cannot drift.
+- **Tests:** `RegressionTests.SinkingAClubInLineWithAnother_LeavesTheNeighboursHitsOpen` and
+  `RegressionTests.SinkingAClubWhereTwoClubsCross_KeepsTheNeighboursLead`.
 
 ## Edge cases checked and deliberately left as-is
 
