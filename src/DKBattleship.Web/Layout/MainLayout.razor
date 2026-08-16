@@ -1,5 +1,12 @@
 @inherits LayoutComponentBase
 
+<div class="driving-range" aria-hidden="true">
+    @for (var i = 0; i < BallCount; i++)
+    {
+        <span class="ball"></span>
+    }
+</div>
+
 <div class="course">
     <header class="clubhouse">
         <span class="logo">&#9971;</span>
@@ -19,3 +26,8 @@
         <a href="https://github.com/dk-cognition/DK-Battleship/blob/main/DEBUGGING.md" target="_blank" rel="noopener">Debugging log</a>
     </footer>
 </div>
+
+@code {
+    // One lane each; app.css styles .ball:nth-child(1..10).
+    private const int BallCount = 10;
+}

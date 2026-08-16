@@ -5,7 +5,8 @@
     --sand: #e6d6a8;
     --sand-dark: #cbb379;
     --flag: #d13b3b;
-    --sky: #eaf4ec;
+    --sky: #dcf1d5;
+    --sky-deep: #bfe4bb;
     --ink: #12241a;
     --white: #ffffff;
     --arcade: "Press Start 2P", "Courier New", monospace;
@@ -17,9 +18,61 @@ html, body {
     margin: 0;
     padding: 0;
     font-family: var(--body-font);
-    background: linear-gradient(180deg, var(--sky) 0%, #d8e9dc 100%);
+    background: linear-gradient(180deg, var(--sky) 0%, var(--sky-deep) 100%);
+    background-attachment: fixed;
     color: var(--ink);
     min-height: 100%;
+}
+
+.driving-range {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.driving-range .ball {
+    position: absolute;
+    top: var(--lane);
+    left: 100%;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 30% 26%, #ffffff 0 30%, rgba(255, 255, 255, 0) 55%),
+        radial-gradient(circle at 62% 68%, #f6faf5 0 55%, #c2d4c2 100%);
+    box-shadow: 0 2px 4px rgba(18, 36, 26, .22), inset -1px -2px 3px rgba(31, 86, 55, .18);
+    opacity: .95;
+    animation: drift-left var(--drift) linear var(--delay) infinite;
+}
+
+@keyframes drift-left {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(calc(-100vw - var(--size) * 2), -18px, 0);
+    }
+}
+
+.driving-range .ball:nth-child(1)  { --lane: 12%; --size: 12px; --drift: 26s; --delay: -3s; }
+.driving-range .ball:nth-child(2)  { --lane: 27%; --size: 18px; --drift: 34s; --delay: -12s; }
+.driving-range .ball:nth-child(3)  { --lane: 41%; --size: 14px; --drift: 22s; --delay: -7s; }
+.driving-range .ball:nth-child(4)  { --lane: 55%; --size: 20px; --drift: 40s; --delay: -20s; }
+.driving-range .ball:nth-child(5)  { --lane: 68%; --size: 13px; --drift: 30s; --delay: -1s; }
+.driving-range .ball:nth-child(6)  { --lane: 79%; --size: 16px; --drift: 24s; --delay: -16s; }
+.driving-range .ball:nth-child(7)  { --lane: 90%; --size: 11px; --drift: 36s; --delay: -9s; }
+.driving-range .ball:nth-child(8)  { --lane: 5%;  --size: 15px; --drift: 44s; --delay: -28s; }
+.driving-range .ball:nth-child(9)  { --lane: 34%; --size: 10px; --drift: 28s; --delay: -22s; }
+.driving-range .ball:nth-child(10) { --lane: 61%; --size: 12px; --drift: 32s; --delay: -34s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .driving-range .ball {
+        animation: none;
+        left: var(--lane);
+    }
 }
 
 h1, h2, h3 {
@@ -51,6 +104,8 @@ a {
 }
 
 .course {
+    position: relative;
+    z-index: 1;
     max-width: 1080px;
     margin: 0 auto;
     padding: 1.25rem 1rem 2.5rem;
