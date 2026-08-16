@@ -1,6 +1,6 @@
 # Debugging log
 
-Defects found while building DK Battleship, all surfaced by tests in `tests/DKBattleship.Tests`
+Defects found while building BattleGolf, all surfaced by tests in `tests/DKBattleship.Tests`
 rather than by guesswork. Each entry lists the symptom, the root cause, the fix and the test that
 now guards it.
 
