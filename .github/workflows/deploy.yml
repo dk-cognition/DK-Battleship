@@ -1,0 +1,65 @@
+name: Build and deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore DKBattleship.sln
+
+      - name: Build
+        run: dotnet build DKBattleship.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/DKBattleship.Tests --configuration Release --no-build --verbosity normal
+
+      - name: Publish Blazor WASM
+        run: dotnet publish src/DKBattleship.Web/DKBattleship.Web.csproj --configuration Release --no-build --output publish
+
+      # GitHub Pages serves the app from https://<owner>.github.io/DK-Battleship/
+      - name: Set base href for the Pages subpath
+        run: sed -i 's|<base href="/" />|<base href="/DK-Battleship/" />|g' publish/wwwroot/index.html
+
+      - name: Add SPA fallback and disable Jekyll
+        run: |
+          cp publish/wwwroot/index.html publish/wwwroot/404.html
+          touch publish/wwwroot/.nojekyll
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,87 @@
+@using DKBattleship.Core
+
+<div class="grid" style="grid-template-columns: repeat(@(Board.Cols + 1), 30px);">
+    <div class="cell label"></div>
+    @for (var col = 0; col < Board.Cols; col++)
+    {
+        <div class="cell label">@((char)('A' + col))</div>
+    }
+
+    @for (var row = 0; row < Board.Rows; row++)
+    {
+        var currentRow = row;
+        <div class="cell label">@(currentRow + 1)</div>
+        @for (var col = 0; col < Board.Cols; col++)
+        {
+            var coordinate = new Coordinate(currentRow, col);
+            <button type="button"
+                    class="cell @CellClass(coordinate)"
+                    title="@coordinate"
+                    aria-label="@coordinate"
+                    disabled="@(!Clickable)"
+                    @onmouseover="@(() => RaiseHover(coordinate))"
+                    @onclick="@(() => RaiseClick(coordinate))">@CellGlyph(coordinate)</button>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Board Board { get; set; } = default!;
+
+    /// <summary>Show un-hit clubs (your own course) instead of hiding them behind the fog.</summary>
+    [Parameter]
+    public bool RevealShips { get; set; }
+
+    [Parameter]
+    public bool Clickable { get; set; }
+
+    [Parameter]
+    public IReadOnlyCollection<Coordinate>? PreviewCells { get; set; }
+
+    [Parameter]
+    public bool PreviewValid { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<Coordinate> OnCellClick { get; set; }
+
+    [Parameter]
+    public EventCallback<Coordinate> OnCellHover { get; set; }
+
+    private Task RaiseClick(Coordinate coordinate) =>
+        Clickable ? OnCellClick.InvokeAsync(coordinate) : Task.CompletedTask;
+
+    private Task RaiseHover(Coordinate coordinate) =>
+        Clickable ? OnCellHover.InvokeAsync(coordinate) : Task.CompletedTask;
+
+    private string CellClass(Coordinate coordinate)
+    {
+        if (PreviewCells is not null && PreviewCells.Contains(coordinate))
+        {
+            return PreviewValid ? "preview clickable" : "preview invalid clickable";
+        }
+
+        var state = Board[coordinate];
+        var classes = state switch
+        {
+            CellState.Hit => "hit",
+            CellState.Miss => "miss",
+            CellState.Ship => RevealShips ? "ship" : string.Empty,
+            _ => string.Empty
+        };
+
+        if (Clickable && state is CellState.Empty or CellState.Ship)
+        {
+            classes = $"{classes} clickable".Trim();
+        }
+
+        return classes;
+    }
+
+    private string CellGlyph(Coordinate coordinate) => Board[coordinate] switch
+    {
+        CellState.Hit => "\u2715",
+        CellState.Miss => "\u25CF",
+        _ => string.Empty
+    };
+}

@@ -1,0 +1,214 @@
+@page "/"
+@using DKBattleship.Core
+@using DKBattleship.Web.Components
+
+<PageTitle>DK Battleship &mdash; Golf Edition</PageTitle>
+
+@if (_game is null)
+{
+    <div class="panel">
+        <h2>Pick your opponent</h2>
+        <p>Every character plays the course differently. More personalities are coming to the roster.</p>
+        <div class="characters">
+            @foreach (var character in GolfCharacters.All)
+            {
+                <button type="button" class="character-card" @onclick="() => StartRound(character)">
+                    <div class="avatar">@character.Avatar</div>
+                    <div class="title">@character.Name</div>
+                    <div><small>@character.Title</small></div>
+                    <p>@character.Description</p>
+                </button>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="panel status">
+        <div>
+            <div class="message">@_game.StatusMessage</div>
+            <small>Opponent: @_game.Opponent.Avatar @_game.Opponent.Name &mdash; @_game.Opponent.Title</small>
+        </div>
+        <div class="scorecard">
+            <div>Your swings: <span>@_game.PlayerSwings</span></div>
+            <div>@(_game.Opponent.Name)'s swings: <span>@_game.AiSwings</span></div>
+        </div>
+    </div>
+
+    @if (_game.IsOver)
+    {
+        <div class="panel game-over">
+            <h2>@(_game.Status == GameStatus.PlayerWon ? "\U0001F3C6 You win the match!" : "\U0001F62C Match lost")</h2>
+            <p>@_game.StatusMessage</p>
+            <div class="controls" style="justify-content:center">
+                <button class="tee" @onclick="() => StartRound(_game.Opponent)">Rematch @_game.Opponent.Name</button>
+                <button class="tee ghost" @onclick="BackToRoster">Change opponent</button>
+            </div>
+        </div>
+    }
+    else if (_game.Status == GameStatus.Placing)
+    {
+        <div class="panel">
+            <h2>Load the bag</h2>
+            <p>
+                Placing the <strong>@_game.NextShipToPlace!.Name</strong> (@_game.NextShipToPlace.Size cells),
+                @(_orientation == Orientation.Horizontal ? "left to right" : "top to bottom").
+                Click the cell where the club starts.
+            </p>
+            <div class="controls">
+                <button class="tee" @onclick="ToggleOrientation">Rotate (@(_orientation == Orientation.Horizontal ? "H" : "V"))</button>
+                <button class="tee ghost" @onclick="RandomPlacement">Let the caddie do it</button>
+                <button class="tee ghost" @onclick="BackToRoster">Change opponent</button>
+            </div>
+        </div>
+
+        <div class="panel boards">
+            <div class="board-wrap">
+                <h3>Your course</h3>
+                <BoardGrid Board="_game.PlayerBoard"
+                           RevealShips="true"
+                           Clickable="true"
+                           PreviewCells="PreviewCells()"
+                           PreviewValid="PreviewIsValid()"
+                           OnCellClick="PlaceShip"
+                           OnCellHover="HoverCell" />
+            </div>
+            <div class="board-wrap">
+                <h3>Still in the bag</h3>
+                <ul class="bag">
+                    @foreach (var ship in _game.ShipsToPlace)
+                    {
+                        <li><span>@ship.Name</span><span>@ship.Size</span></li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="panel boards">
+            <div class="board-wrap">
+                <h3>@_game.Opponent.Name's course <small>@(_game.Status == GameStatus.PlayerTurn ? "your swing" : "wait for the group ahead")</small></h3>
+                <BoardGrid Board="_game.AiBoard"
+                           Clickable="@(_game.Status == GameStatus.PlayerTurn)"
+                           OnCellClick="Fire" />
+                <ul class="bag">
+                    @foreach (var ship in _game.AiBoard.Ships)
+                    {
+                        <li class="@(ship.IsSunk ? "sunk" : null)"><span>@ship.Name</span><span>@(ship.IsSunk ? "in the hole" : $"{ship.Hits.Count}/{ship.Size}")</span></li>
+                    }
+                </ul>
+            </div>
+            <div class="board-wrap">
+                <h3>Your course</h3>
+                <BoardGrid Board="_game.PlayerBoard" RevealShips="true" />
+                <ul class="bag">
+                    @foreach (var ship in _game.PlayerBoard.Ships)
+                    {
+                        <li class="@(ship.IsSunk ? "sunk" : null)"><span>@ship.Name</span><span>@(ship.IsSunk ? "in the hole" : $"{ship.Hits.Count}/{ship.Size}")</span></li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Scorecard notes</h3>
+            <div class="log">
+                @foreach (var entry in _log)
+                {
+                    <p>@entry</p>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private Game? _game;
+    private Orientation _orientation = Orientation.Horizontal;
+    private Coordinate? _hover;
+    private readonly List<string> _log = new();
+    private bool _aiSwinging;
+
+    private void StartRound(GolfCharacter character)
+    {
+        _game = new Game(character);
+        _orientation = Orientation.Horizontal;
+        _hover = null;
+        _aiSwinging = false;
+        _log.Clear();
+    }
+
+    private void BackToRoster()
+    {
+        _game = null;
+        _log.Clear();
+    }
+
+    private void ToggleOrientation() =>
+        _orientation = _orientation == Orientation.Horizontal ? Orientation.Vertical : Orientation.Horizontal;
+
+    private void HoverCell(Coordinate coordinate) => _hover = coordinate;
+
+    private IReadOnlyCollection<Coordinate>? PreviewCells()
+    {
+        if (_game?.NextShipToPlace is null || _hover is null)
+        {
+            return null;
+        }
+
+        return Board.Span(_hover.Value, _game.NextShipToPlace.Size, _orientation)
+            .Where(c => _game.PlayerBoard.InBounds(c))
+            .ToList();
+    }
+
+    private bool PreviewIsValid() =>
+        _game?.NextShipToPlace is not null && _hover is not null
+        && _game.PlayerBoard.CanPlace(_game.NextShipToPlace, _hover.Value, _orientation);
+
+    private void PlaceShip(Coordinate coordinate)
+    {
+        _game?.PlacePlayerShip(coordinate, _orientation);
+        _hover = null;
+    }
+
+    private void RandomPlacement()
+    {
+        _game?.RandomizePlayerShips();
+        _hover = null;
+    }
+
+    private async Task Fire(Coordinate coordinate)
+    {
+        if (_game is null || _aiSwinging || _game.Status != GameStatus.PlayerTurn)
+        {
+            return;
+        }
+
+        var result = _game.PlayerFire(coordinate);
+        if (result == ShotResult.AlreadyShot)
+        {
+            return;
+        }
+
+        _log.Insert(0, _game.StatusMessage);
+
+        if (_game.Status != GameStatus.AiTurn)
+        {
+            return;
+        }
+
+        _aiSwinging = true;
+        StateHasChanged();
+        try
+        {
+            await Task.Delay(650);
+            _game.AiFire();
+            _log.Insert(0, _game.StatusMessage);
+        }
+        finally
+        {
+            _aiSwinging = false;
+        }
+    }
+}
