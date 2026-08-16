@@ -85,6 +85,26 @@ now guards it.
   (Tiger averages ~45 swings to clear a course; the bug cost him several per match, which is invisible
   in win rate but obvious here).
 
+## 6. The rotate button advertised an "H" shortcut that was never wired up
+
+- **Symptom:** reported from play-testing. The placement button reads `Rotate (H)`, which reads as
+  "press H to rotate", but pressing `H` (or `V`, or `R`) did nothing — the club stayed horizontal and
+  the only way to rotate was clicking the button.
+- **Root cause:** the parenthesised letter was only ever a label for the *current* orientation
+  (`H`/`V`), and `Home.razor` had no key handling at all. Blazor's `@onkeydown` only fires for the
+  focused element, and nothing on the placement screen takes focus, so a document-level listener was
+  missing rather than merely misrouted.
+- **Fix:** `wwwroot/js/keyboard.js` registers a `keydown` listener on `window` and forwards the key to
+  the page through a `DotNetObjectReference`; `Home.HandleKey` rotates the club for `H`, `V` or `R`.
+  Only those three keys cross the interop boundary; they are ignored while a text field has focus, when
+  Ctrl/Alt/Cmd is held, on auto-repeat, and outside the placement phase, and the listener plus the .NET
+  reference are released in `DisposeAsync`. The helper text now states the shortcut, and the button
+  label is a fixed `Rotate (H)` instead of flipping to `V` — the letter names the key, not the current
+  orientation, which the sentence above the board already spells out.
+- **Verified in the browser:** pressing `H` on the placement screen flips "left to right" ↔ "top to
+  bottom", the next click places the club along the new axis, and the same key during the battle phase
+  is a no-op with a clean console.
+
 ## Edge cases checked and deliberately left as-is
 
 These were probed with tests and behave correctly; they are documented so the behaviour is not
