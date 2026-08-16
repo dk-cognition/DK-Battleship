@@ -6,7 +6,7 @@ namespace DKBattleship.Tests;
 
 public class GameTests
 {
-    private static Game NewGame(int seed = 99) => new(GolfCharacters.ThePro, random: new Random(seed));
+    private static Game NewGame(int seed = 99) => new(GolfCharacters.TigerWoods, random: new Random(seed));
 
     [Fact]
     public void NewGame_StartsInPlacingPhaseWithAiBoardReady()
@@ -204,19 +204,21 @@ public class GameTests
     [Fact]
     public void Characters_SeedRosterExposesDistinctStrategies()
     {
-        Assert.Equal(2, GolfCharacters.All.Count);
+        Assert.Equal(4, GolfCharacters.All.Count);
         var random = new Random(1);
         var strategies = GolfCharacters.All.Select(c => c.CreateStrategy(random)).ToList();
 
-        Assert.Equal(new[] { "The Pro", "The Weekend Hacker" }, strategies.Select(s => s.Name));
+        Assert.Equal(
+            new[] { "Tiger Woods", "Jordan Spieth", "Jackson Koivun", "Kyle Stalder" },
+            strategies.Select(s => s.Name));
         Assert.All(GolfCharacters.All, c => Assert.False(string.IsNullOrWhiteSpace(c.Description)));
     }
 
     [Fact]
     public void Game_UsesTheSelectedCharactersStrategy()
     {
-        var game = new Game(GolfCharacters.TheWeekendHacker, random: new Random(4));
-        Assert.Equal("The Weekend Hacker", game.Ai.Name);
-        Assert.Equal("The Weekend Hacker", game.Opponent.Name);
+        var game = new Game(GolfCharacters.KyleStalder, random: new Random(4));
+        Assert.Equal("Kyle Stalder", game.Ai.Name);
+        Assert.Equal("Kyle Stalder", game.Opponent.Name);
     }
 }

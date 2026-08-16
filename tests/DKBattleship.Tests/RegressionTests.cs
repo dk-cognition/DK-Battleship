@@ -48,6 +48,30 @@ public class RegressionTests
     }
 
     [Fact]
+    public void SinkingAClubInLineWithAnother_LeavesTheNeighboursHitsOpen()
+    {
+        var board = new Board();
+        var bag = Ship.CreateGolfBag();
+        var putter = bag.Single(s => s.Name == "Putter");
+        var hybrid = bag.Single(s => s.Name == "Hybrid");
+        Assert.True(board.PlaceShip(putter, new Coordinate(0, 0), Orientation.Horizontal)); // A1-B1
+        Assert.True(board.PlaceShip(hybrid, new Coordinate(0, 2), Orientation.Horizontal)); // C1-E1
+        var ai = new HuntTargetAi("Probe", new Random(1), AiSkill.Tour);
+
+        foreach (var col in new[] { 2, 3, 0, 1 })
+        {
+            MatchSimulator.Fire(ai, board, new Coordinate(0, col));
+        }
+
+        Assert.True(putter.IsSunk);
+        Assert.False(hybrid.IsSunk);
+
+        // The hits at C1/D1 belong to the hybrid, so the AI must keep working that lead.
+        Assert.Equal(AiMode.Target, ai.Mode);
+        Assert.Contains(new Coordinate(0, 4), ai.TargetQueue);
+    }
+
+    [Fact]
     public void NextShot_NeverRepeatsWhenResultsAreNotRecordedYet()
     {
         var board = new Board();

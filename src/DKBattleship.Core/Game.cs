@@ -14,7 +14,7 @@ public class Game
     public Game(GolfCharacter? opponent = null, int rows = Board.DefaultSize, int cols = Board.DefaultSize, Random? random = null)
     {
         _random = random ?? new Random();
-        Opponent = opponent ?? GolfCharacters.ThePro;
+        Opponent = opponent ?? GolfCharacters.TigerWoods;
         Ai = Opponent.CreateStrategy(_random);
         PlayerBoard = new Board(rows, cols);
         AiBoard = new Board(rows, cols);
@@ -147,7 +147,7 @@ public class Game
         var coordinate = Ai.NextShot(view);
         var ship = PlayerBoard.ShipAt(coordinate);
         var result = PlayerBoard.ReceiveShot(coordinate);
-        Ai.RecordResult(coordinate, result);
+        Ai.RecordResult(coordinate, result, result == ShotResult.Sunk ? ship!.Size : 0);
         AiSwings++;
 
         StatusMessage = result switch

@@ -8,7 +8,7 @@
 {
     <div class="panel">
         <h2>Pick your opponent</h2>
-        <p>Every character plays the course differently. More personalities are coming to the roster.</p>
+        <p>Four players, four skill levels. The win rate is how often each one takes the match off an average club player.</p>
         <div class="characters">
             @foreach (var character in GolfCharacters.All)
             {
@@ -17,6 +17,10 @@
                     <div class="title">@character.Name</div>
                     <div><small>@character.Title</small></div>
                     <p>@character.Description</p>
+                    <div class="handicap">
+                        <span class="win-rate">Wins @($"{character.ExpectedWinRate:P0}") of matches</span>
+                        <span class="tees">@Difficulty(character)</span>
+                    </div>
                 </button>
             }
         </div>
@@ -138,6 +142,14 @@ else
         _aiSwinging = false;
         _log.Clear();
     }
+
+    private static string Difficulty(GolfCharacter character) => character.ExpectedWinRate switch
+    {
+        >= 0.75 => "Championship tees",
+        >= 0.55 => "Back tees",
+        >= 0.35 => "Member tees",
+        _ => "Forward tees"
+    };
 
     private void BackToRoster()
     {

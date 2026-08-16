@@ -10,9 +10,24 @@ Battleship played with a bag of golf clubs, against an AI opponent, in the brows
 - Your bag is the fleet: **Driver** (5), **Fairway Wood** (4), **Hybrid** (3), **Iron** (3), **Putter** (2).
 - Place clubs by hand (click + rotate) or let the caddie place them for you.
 - Take turns swinging at cells on your opponent's course. Sinking a club puts it "in the hole".
-- Opponents are golf characters, each with its own AI strategy. Seed roster: **The Pro** (parity
-  sweep, efficient) and **The Weekend Hacker** (sprays it around). More personalities can be added
-  without touching the game rules.
+- Opponents are golf characters, each with its own AI strategy and skill level.
+
+## The roster
+
+| Character | Title | Wins | How they play |
+| --- | --- | --- | --- |
+| Tiger Woods | The GOAT | ~80% | Probability-density hunting, never loses focus |
+| Jordan Spieth | Major Winner | ~60% | Parity sweep + relentless targeting, occasional wild swing |
+| Jackson Koivun | Amateur Standout | ~40% | Parity sweep, but drops the plot fairly often |
+| Kyle Stalder | Weekend Regular | ~20% | Sprays it around and forgets which hole he was working |
+
+Win rates are the share of matches each character takes off `AiSkill.ReferenceClubPlayer` — an
+average club player who sweeps at random, chases wounded clubs and gets distracted 40% of the time.
+They are measured, not guessed: `SkillLevelTests` simulates 500 full matches per character through
+`MatchSimulator` and fails if a character drifts more than 7 points off its advertised rate.
+
+Difficulty comes from three dials on `AiSkill` (`UseDensityHunt`, `UseParity`, `MistakeChance`), so a
+new character is a new roster entry — or a whole new `IAiPlayer` — without touching the game rules.
 
 ## Solution layout
 
@@ -25,10 +40,10 @@ Battleship played with a bag of golf clubs, against an AI opponent, in the brows
 Key core types: `Board` (`CanPlace` / `PlaceShip` / `ReceiveShot` / `AllShipsSunk`), `Ship`
 (`IsSunk`), `Game` (`PlayerFire` / `AiFire`, status + golf-flavoured messages), `ShipPlacer`
 (random valid placement), `IAiPlayer` + `HuntTargetAi` (hunt/target with parity sweep), and
-`GolfCharacter` / `GolfCharacters` (roster mapping a personality to a strategy).
+`GolfCharacter` / `GolfCharacters` (roster mapping a personality to a strategy and a skill level).
 
-Adding a new opponent means adding one `IAiPlayer` implementation and one `GolfCharacter` entry —
-the board, rules and UI stay unchanged.
+Adding a new opponent means adding one `AiSkill` (or a whole `IAiPlayer` implementation) and one
+`GolfCharacter` entry — the board, rules and UI stay unchanged.
 
 ## Running locally
 
