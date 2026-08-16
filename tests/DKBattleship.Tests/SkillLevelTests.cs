@@ -1,6 +1,7 @@
 namespace DKBattleship.Tests;
 
 using DKBattleship.Core;
+using DKBattleship.Core.Ai;
 using Xunit;
 
 /// <summary>
@@ -12,6 +13,43 @@ public class SkillLevelTests
 {
     private const int Matches = 500;
     private const double Tolerance = 0.07;
+
+    /// <summary>
+    /// Density hunting is only worth its cost if it clears a course quickly; a bookkeeping slip (e.g.
+    /// counting placements across cells belonging to a club already in the hole) shows up here as extra
+    /// swings long before it moves the win rate.
+    /// </summary>
+    [Fact]
+    public void Tiger_ClearsACourseInFarFewerSwingsThanKyle()
+    {
+        var tiger = AverageSwingsToClear(GolfCharacters.TigerWoods, matches: 100, seed: 31);
+        var kyle = AverageSwingsToClear(GolfCharacters.KyleStalder, matches: 100, seed: 31);
+
+        Assert.InRange(tiger, 40, 52);
+        Assert.True(kyle > tiger + 20, $"Kyle averaged {kyle:F1} swings vs Tiger's {tiger:F1}");
+    }
+
+    private static double AverageSwingsToClear(GolfCharacter character, int matches, int seed)
+    {
+        var random = new Random(seed);
+        var total = 0;
+
+        for (var i = 0; i < matches; i++)
+        {
+            var board = new Board();
+            ShipPlacer.PlaceRandomly(board, Ship.CreateGolfBag(), random);
+            var ai = character.CreateStrategy(random);
+            var view = new BoardView(board);
+
+            while (!board.AllShipsSunk)
+            {
+                MatchSimulator.Fire(ai, board, ai.NextShot(view));
+                total++;
+            }
+        }
+
+        return (double)total / matches;
+    }
 
     [Theory]
     [InlineData("Tiger Woods", 0.80)]

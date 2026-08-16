@@ -70,6 +70,21 @@ now guards it.
 - **Tests:** `RegressionTests.SinkingAClubInLineWithAnother_LeavesTheNeighboursHitsOpen` and
   `RegressionTests.SinkingAClubWhereTwoClubsCross_KeepsTheNeighboursLead`.
 
+## 5. Density hunting counted placements straight through clubs already in the hole
+
+- **Symptom:** raised in code review of the skill-level change rather than by a failing test: Tiger's
+  hunt kept favouring parts of the course he had already finished with.
+- **Root cause:** `PlacementDensity` rejected a candidate placement only if it covered a *miss*. Cells
+  that were hit stayed "possible" forever, including the cells of a club already sunk, so every
+  placement threaded through a finished club inflated the score of its neighbours.
+- **Fix:** cells attributed to a sunk club move into `_resolvedHits` and are treated as blocked when
+  counting placements — no remaining club can sit on them. Also fixed the sibling nit: when a size is
+  reported but neither axis's run matches it, the *shorter* (less contaminated) run is credited, since
+  the longer one is by definition spilling into a neighbour.
+- **Test:** `SkillLevelTests.Tiger_ClearsACourseInFarFewerSwingsThanKyle` pins the swing budget
+  (Tiger averages ~45 swings to clear a course; the bug cost him several per match, which is invisible
+  in win rate but obvious here).
+
 ## Edge cases checked and deliberately left as-is
 
 These were probed with tests and behave correctly; they are documented so the behaviour is not

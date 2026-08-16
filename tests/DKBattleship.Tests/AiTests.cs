@@ -111,7 +111,9 @@ public class AiTests
         var ai = new HuntTargetAi(random: new Random(13), useParity: true);
         var view = new BoardView(board);
 
-        for (var i = 0; i < 20; i++)
+        // The sweep is spaced by the shortest club still afloat, so the 2-cell grid only holds while
+        // the putter is in play.
+        for (var i = 0; i < 20 && !board.AllShipsSunk; i++)
         {
             var shot = ai.NextShot(view);
             if (ai.Mode == AiMode.Hunt)
@@ -119,7 +121,7 @@ public class AiTests
                 Assert.True((shot.Row + shot.Col) % 2 == 0, $"{shot} is off the parity grid");
             }
 
-            ai.RecordResult(shot, board.ReceiveShot(shot));
+            MatchSimulator.Fire(ai, board, shot);
         }
     }
 

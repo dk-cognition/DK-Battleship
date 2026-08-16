@@ -25,6 +25,9 @@ public class HuntTargetAi : IAiPlayer
     /// <summary>Hits that have not yet been attributed to a sunk club.</summary>
     private readonly HashSet<Coordinate> _openHits = new();
 
+    /// <summary>Hits attributed to a club already in the hole — no remaining club can sit on them.</summary>
+    private readonly HashSet<Coordinate> _resolvedHits = new();
+
     private readonly List<Coordinate> _targetQueue = new();
 
     public HuntTargetAi(string name = "Hunt & Target", Random? random = null, bool useParity = true)
@@ -98,6 +101,7 @@ public class HuntTargetAi : IAiPlayer
         _shotsTaken.Clear();
         _pendingShots.Clear();
         _openHits.Clear();
+        _resolvedHits.Clear();
         _targetQueue.Clear();
         _remainingSizes.Clear();
         _remainingSizes.AddRange(Ship.CreateGolfBag().Select(s => s.Size));
@@ -151,7 +155,10 @@ public class HuntTargetAi : IAiPlayer
                         span.Add(origin.Offset(step.Item1 * i, step.Item2 * i));
                     }
 
-                    if (span.Any(c => !view.InBounds(c) || (view.WasShot(c) && !view.WasHit(c))))
+                    if (span.Any(c =>
+                            !view.InBounds(c) ||
+                            _resolvedHits.Contains(c) ||
+                            (view.WasShot(c) && !view.WasHit(c))))
                     {
                         continue;
                     }
@@ -190,6 +197,15 @@ public class HuntTargetAi : IAiPlayer
     {
         var horizontalRun = CollectRun(lastHit, 0, 1);
         var verticalRun = CollectRun(lastHit, 1, 0);
+
+        if (sunkClubSize <= 0)
+        {
+            // No size reported (an implementation calling the two-argument overload): all that is left
+            // is the old heuristic — credit the longer straight run of hits.
+            ResolveCells(horizontalRun.Count >= verticalRun.Count ? horizontalRun : verticalRun, 0);
+            return;
+        }
+
         var horizontal = WindowForSunkClub(horizontalRun, lastHit, sunkClubSize);
         var vertical = WindowForSunkClub(verticalRun, lastHit, sunkClubSize);
 
@@ -200,11 +216,11 @@ public class HuntTargetAi : IAiPlayer
         }
         else if (horizontalRun.Count != verticalRun.Count)
         {
-            // The axis whose run the club fills exactly is the club; the longer run spills into a
-            // neighbour's hits.
+            // The axis whose run the club fills exactly is the club; a longer run spills into a
+            // neighbour's hits, so when neither fits exactly take the shorter, less contaminated one.
             sunkCells = horizontalRun.Count == sunkClubSize ? horizontal
                 : verticalRun.Count == sunkClubSize ? vertical
-                : horizontalRun.Count > verticalRun.Count ? horizontal : vertical;
+                : horizontalRun.Count < verticalRun.Count ? horizontal : vertical;
         }
         else
         {
@@ -214,9 +230,16 @@ public class HuntTargetAi : IAiPlayer
             sunkCells = horizontal.Intersect(vertical).ToList();
         }
 
+        ResolveCells(sunkCells, sunkClubSize);
+    }
+
+    /// <summary>Marks cells as belonging to a club in the hole and strikes that club off the bag.</summary>
+    private void ResolveCells(List<Coordinate> sunkCells, int sunkClubSize)
+    {
         foreach (var cell in sunkCells)
         {
             _openHits.Remove(cell);
+            _resolvedHits.Add(cell);
         }
 
         _remainingSizes.Remove(sunkClubSize > 0 ? sunkClubSize : sunkCells.Count);
@@ -230,11 +253,6 @@ public class HuntTargetAi : IAiPlayer
     /// </summary>
     private static List<Coordinate>? WindowForSunkClub(List<Coordinate> run, Coordinate lastHit, int sunkClubSize)
     {
-        if (sunkClubSize <= 0)
-        {
-            return run;
-        }
-
         if (sunkClubSize > run.Count)
         {
             return null;
