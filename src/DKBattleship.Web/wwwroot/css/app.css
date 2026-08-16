@@ -125,6 +125,15 @@ footer span {
     color: var(--fairway-dark);
 }
 
+kbd {
+    font-family: var(--arcade);
+    font-size: .7em;
+    padding: .15em .4em;
+    border-radius: 3px;
+    background: var(--sand);
+    box-shadow: 0 2px 0 var(--sand-dark);
+}
+
 .controls {
     display: flex;
     flex-wrap: wrap;

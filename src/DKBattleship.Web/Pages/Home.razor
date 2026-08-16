@@ -1,6 +1,9 @@
 @page "/"
 @using DKBattleship.Core
 @using DKBattleship.Web.Components
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime Js
 
 <PageTitle>BattleGolf</PageTitle>
 
@@ -57,7 +60,7 @@ else
             <p>
                 Placing the <strong>@_game.NextShipToPlace!.Name</strong> (@_game.NextShipToPlace.Size cells),
                 @(_orientation == Orientation.Horizontal ? "left to right" : "top to bottom").
-                Click the cell where the club starts.
+                Click the cell where the club starts, or press <kbd>H</kbd> to rotate it.
             </p>
             <div class="controls">
                 <button class="tee" @onclick="ToggleOrientation">Rotate (@(_orientation == Orientation.Horizontal ? "H" : "V"))</button>
@@ -133,6 +136,8 @@ else
     private Coordinate? _hover;
     private readonly List<string> _log = new();
     private bool _aiSwinging;
+    private DotNetObjectReference<Home>? _selfReference;
+    private IJSObjectReference? _keyboard;
 
     private void StartRound(GolfCharacter character)
     {
@@ -159,6 +164,54 @@ else
 
     private void ToggleOrientation() =>
         _orientation = _orientation == Orientation.Horizontal ? Orientation.Vertical : Orientation.Horizontal;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _selfReference = DotNetObjectReference.Create(this);
+        _keyboard = await Js.InvokeAsync<IJSObjectReference>("import", "./js/keyboard.js");
+        await _keyboard.InvokeVoidAsync("register", _selfReference);
+    }
+
+    [JSInvokable]
+    public void HandleKey(string key)
+    {
+        if (_game?.Status != GameStatus.Placing)
+        {
+            return;
+        }
+
+        switch (key.ToLowerInvariant())
+        {
+            case "h":
+            case "v":
+            case "r":
+                ToggleOrientation();
+                StateHasChanged();
+                break;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_keyboard is not null)
+        {
+            try
+            {
+                await _keyboard.InvokeVoidAsync("unregister");
+                await _keyboard.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        _selfReference?.Dispose();
+    }
 
     private void HoverCell(Coordinate coordinate) => _hover = coordinate;
 
