@@ -11,7 +11,7 @@
 {
     <div class="panel">
         <h2>Pick your opponent</h2>
-        <p>Four players, four skill levels. The win rate is how often each one takes the match off an average club player.</p>
+        <p>Four players, four skill levels. Pick the golfer you fancy your chances against.</p>
         <div class="characters">
             @foreach (var character in GolfCharacters.All)
             {
@@ -21,8 +21,8 @@
                     <div><small>@character.Title</small></div>
                     <p>@character.Description</p>
                     <div class="handicap">
-                        <span class="win-rate">Wins @($"{character.ExpectedWinRate:P0}") of matches</span>
-                        <span class="tees">@Difficulty(character)</span>
+                        <span class="difficulty">Difficulty: @DifficultyLabel(character)</span>
+                        <span class="tees">@TeeLabel(character)</span>
                     </div>
                 </button>
             }
@@ -148,7 +148,15 @@ else
         _log.Clear();
     }
 
-    private static string Difficulty(GolfCharacter character) => character.ExpectedWinRate switch
+    private static string DifficultyLabel(GolfCharacter character) => character.ExpectedWinRate switch
+    {
+        >= 0.75 => "Impossible",
+        >= 0.55 => "Hard",
+        >= 0.35 => "Medium",
+        _ => "Easy"
+    };
+
+    private static string TeeLabel(GolfCharacter character) => character.ExpectedWinRate switch
     {
         >= 0.75 => "Championship tees",
         >= 0.55 => "Back tees",

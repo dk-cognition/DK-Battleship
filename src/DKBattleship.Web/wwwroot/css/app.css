@@ -121,6 +121,11 @@ a {
     box-shadow: 0 6px 18px rgba(0, 0, 0, .15);
 }
 
+/* The banner title is decorative, never a keyboard stop, so no focus ring. */
+.clubhouse h1:focus {
+    outline: none;
+}
+
 .clubhouse .logo {
     font-size: 2.5rem;
     line-height: 1;
@@ -269,7 +274,7 @@ button.tee:disabled {
     align-items: center;
 }
 
-.character-card .win-rate, .character-card .tees {
+.character-card .difficulty, .character-card .tees {
     font-family: var(--arcade);
     font-size: .55rem;
     text-transform: uppercase;
@@ -277,7 +282,7 @@ button.tee:disabled {
     padding: .3rem .6rem;
 }
 
-.character-card .win-rate {
+.character-card .difficulty {
     background: var(--fairway);
     color: #fff;
 }
