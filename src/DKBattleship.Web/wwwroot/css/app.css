@@ -32,46 +32,46 @@ html, body {
     z-index: 0;
 }
 
-.driving-range .ball {
+/* Each layer is one tiled ball pattern; --tile is both the ball spacing and the
+   distance the layer travels per loop, so the pan is seamless. */
+.driving-range .field {
     position: absolute;
-    top: var(--lane);
-    left: 100%;
-    width: var(--size);
-    height: var(--size);
-    border-radius: 50%;
-    background:
-        radial-gradient(circle at 30% 26%, #ffffff 0 30%, rgba(255, 255, 255, 0) 55%),
-        radial-gradient(circle at 62% 68%, #f6faf5 0 55%, #c2d4c2 100%);
-    box-shadow: 0 2px 4px rgba(18, 36, 26, .22), inset -1px -2px 3px rgba(31, 86, 55, .18);
-    opacity: .95;
-    animation: drift-left var(--drift) linear var(--delay) infinite;
+    inset: calc(var(--tile) * -2);
+    background-image:
+        radial-gradient(circle at 36% 32%, #ffffff 0 26%, #f6faf5 36%, #e2eee0 42%, #a8c0a9 46%, rgba(168, 192, 169, 0) 48%),
+        radial-gradient(circle at 36% 32%, #ffffff 0 26%, #f6faf5 36%, #e2eee0 42%, #a8c0a9 46%, rgba(168, 192, 169, 0) 48%);
+    background-size: var(--tile) var(--tile);
+    background-position: 0 0, calc(var(--tile) / 2) calc(var(--tile) / 2);
+    opacity: var(--layer-opacity);
+    will-change: transform;
+    animation: pan-left var(--pan) linear infinite;
 }
 
-@keyframes drift-left {
+.driving-range .field.near {
+    --tile: 24px;
+    --pan: 1.7s;
+    --layer-opacity: .9;
+}
+
+.driving-range .field.far {
+    --tile: 15px;
+    --pan: 2.6s;
+    --layer-opacity: .2;
+}
+
+@keyframes pan-left {
     from {
         transform: translate3d(0, 0, 0);
     }
 
     to {
-        transform: translate3d(calc(-100vw - var(--size) * 2), -18px, 0);
+        transform: translate3d(calc(var(--tile) * -1), 0, 0);
     }
 }
 
-.driving-range .ball:nth-child(1)  { --lane: 12%; --size: 12px; --drift: 26s; --delay: -3s; }
-.driving-range .ball:nth-child(2)  { --lane: 27%; --size: 18px; --drift: 34s; --delay: -12s; }
-.driving-range .ball:nth-child(3)  { --lane: 41%; --size: 14px; --drift: 22s; --delay: -7s; }
-.driving-range .ball:nth-child(4)  { --lane: 55%; --size: 20px; --drift: 40s; --delay: -20s; }
-.driving-range .ball:nth-child(5)  { --lane: 68%; --size: 13px; --drift: 30s; --delay: -1s; }
-.driving-range .ball:nth-child(6)  { --lane: 79%; --size: 16px; --drift: 24s; --delay: -16s; }
-.driving-range .ball:nth-child(7)  { --lane: 90%; --size: 11px; --drift: 36s; --delay: -9s; }
-.driving-range .ball:nth-child(8)  { --lane: 5%;  --size: 15px; --drift: 44s; --delay: -28s; }
-.driving-range .ball:nth-child(9)  { --lane: 34%; --size: 10px; --drift: 28s; --delay: -22s; }
-.driving-range .ball:nth-child(10) { --lane: 61%; --size: 12px; --drift: 32s; --delay: -34s; }
-
 @media (prefers-reduced-motion: reduce) {
-    .driving-range .ball {
+    .driving-range .field {
         animation: none;
-        left: var(--lane);
     }
 }
 

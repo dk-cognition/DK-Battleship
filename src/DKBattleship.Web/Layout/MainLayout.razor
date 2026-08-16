@@ -1,10 +1,8 @@
 @inherits LayoutComponentBase
 
 <div class="driving-range" aria-hidden="true">
-    @for (var i = 0; i < BallCount; i++)
-    {
-        <span class="ball"></span>
-    }
+    <div class="field far"></div>
+    <div class="field near"></div>
 </div>
 
 <div class="course">
@@ -27,7 +25,3 @@
     </footer>
 </div>
 
-@code {
-    // One lane each; app.css styles .ball:nth-child(1..10).
-    private const int BallCount = 10;
-}
