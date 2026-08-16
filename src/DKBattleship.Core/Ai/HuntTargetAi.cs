@@ -13,8 +13,11 @@ public enum AiMode
 public class HuntTargetAi : IAiPlayer
 {
     private readonly Random _random;
-    private readonly bool _useParity;
+    private readonly AiSkill _skill;
     private readonly HashSet<Coordinate> _shotsTaken = new();
+
+    /// <summary>Sizes of the clubs still afloat, used by density hunting.</summary>
+    private readonly List<int> _remainingSizes = new();
 
     /// <summary>Cells handed out by <see cref="NextShot"/> whose result has not been reported yet.</summary>
     private readonly HashSet<Coordinate> _pendingShots = new();
@@ -25,10 +28,16 @@ public class HuntTargetAi : IAiPlayer
     private readonly List<Coordinate> _targetQueue = new();
 
     public HuntTargetAi(string name = "Hunt & Target", Random? random = null, bool useParity = true)
+        : this(name, random, new AiSkill(UseDensityHunt: false, UseParity: useParity, MistakeChance: 0.0))
+    {
+    }
+
+    public HuntTargetAi(string name, Random? random, AiSkill skill)
     {
         Name = name;
         _random = random ?? new Random();
-        _useParity = useParity;
+        _skill = skill;
+        _remainingSizes.AddRange(Ship.CreateGolfBag().Select(s => s.Size));
     }
 
     public string Name { get; }
@@ -43,7 +52,9 @@ public class HuntTargetAi : IAiPlayer
     {
         PruneQueue(view);
 
-        if (_targetQueue.Count > 0)
+        var sloppy = _skill.MistakeChance > 0 && _random.NextDouble() < _skill.MistakeChance;
+
+        if (!sloppy && _targetQueue.Count > 0)
         {
             var target = _targetQueue[0];
             _targetQueue.RemoveAt(0);
@@ -57,21 +68,12 @@ public class HuntTargetAi : IAiPlayer
             throw new InvalidOperationException("No cells left to swing at.");
         }
 
-        if (_useParity)
-        {
-            var parityCells = untried.Where(c => (c.Row + c.Col) % 2 == 0).ToList();
-            if (parityCells.Count > 0)
-            {
-                untried = parityCells;
-            }
-        }
-
-        var shot = untried[_random.Next(untried.Count)];
+        var shot = sloppy ? untried[_random.Next(untried.Count)] : PickHuntCell(view, untried);
         _pendingShots.Add(shot);
         return shot;
     }
 
-    public void RecordResult(Coordinate shot, ShotResult result)
+    public void RecordResult(Coordinate shot, ShotResult result, int sunkClubSize = 0)
     {
         _shotsTaken.Add(shot);
         _pendingShots.Remove(shot);
@@ -85,7 +87,7 @@ public class HuntTargetAi : IAiPlayer
                 break;
             case ShotResult.Sunk:
                 _openHits.Add(shot);
-                ResolveSunkShip(shot);
+                ResolveSunkShip(shot, sunkClubSize);
                 RebuildQueueFromOpenHits();
                 break;
         }
@@ -97,9 +99,77 @@ public class HuntTargetAi : IAiPlayer
         _pendingShots.Clear();
         _openHits.Clear();
         _targetQueue.Clear();
+        _remainingSizes.Clear();
+        _remainingSizes.AddRange(Ship.CreateGolfBag().Select(s => s.Size));
     }
 
     private bool IsAvailable(Coordinate c) => !_shotsTaken.Contains(c) && !_pendingShots.Contains(c);
+
+    private Coordinate PickHuntCell(BoardView view, List<Coordinate> untried)
+    {
+        if (_skill.UseDensityHunt)
+        {
+            var density = PlacementDensity(view, untried);
+            var best = density.Values.Max();
+            if (best > 0)
+            {
+                var contenders = density.Where(kv => kv.Value == best).Select(kv => kv.Key).ToList();
+                return contenders[_random.Next(contenders.Count)];
+            }
+        }
+
+        if (_skill.UseParity)
+        {
+            var shortest = _remainingSizes.Count > 0 ? _remainingSizes.Min() : 2;
+            var parityCells = untried.Where(c => (c.Row + c.Col) % shortest == 0).ToList();
+            if (parityCells.Count > 0)
+            {
+                untried = parityCells;
+            }
+        }
+
+        return untried[_random.Next(untried.Count)];
+    }
+
+    /// <summary>
+    /// For every club still in the bag, count the legal placements covering each candidate cell.
+    /// Placements crossing a known hit score extra, which merges hunting and targeting.
+    /// </summary>
+    private Dictionary<Coordinate, int> PlacementDensity(BoardView view, List<Coordinate> untried)
+    {
+        var density = untried.ToDictionary(c => c, _ => 0);
+
+        foreach (var size in _remainingSizes)
+        {
+            foreach (var origin in view.AllCells())
+            {
+                foreach (var step in new[] { (0, 1), (1, 0) })
+                {
+                    var span = new List<Coordinate>(size);
+                    for (var i = 0; i < size; i++)
+                    {
+                        span.Add(origin.Offset(step.Item1 * i, step.Item2 * i));
+                    }
+
+                    if (span.Any(c => !view.InBounds(c) || (view.WasShot(c) && !view.WasHit(c))))
+                    {
+                        continue;
+                    }
+
+                    var weight = 1 + span.Count(c => _openHits.Contains(c)) * 12;
+                    foreach (var cell in span)
+                    {
+                        if (density.ContainsKey(cell))
+                        {
+                            density[cell] += weight;
+                        }
+                    }
+                }
+            }
+        }
+
+        return density;
+    }
 
     private void EnqueueNeighbours(Coordinate origin)
     {
@@ -116,18 +186,71 @@ public class HuntTargetAi : IAiPlayer
     /// A sunk club is the straight run of hits through <paramref name="lastHit"/>; those cells stop
     /// being leads, while hits belonging to another club stay open.
     /// </summary>
-    private void ResolveSunkShip(Coordinate lastHit)
+    private void ResolveSunkShip(Coordinate lastHit, int sunkClubSize)
     {
-        var horizontal = CollectRun(lastHit, 0, 1);
-        var vertical = CollectRun(lastHit, 1, 0);
-        var sunkCells = horizontal.Count >= vertical.Count ? horizontal : vertical;
+        var horizontalRun = CollectRun(lastHit, 0, 1);
+        var verticalRun = CollectRun(lastHit, 1, 0);
+        var horizontal = WindowForSunkClub(horizontalRun, lastHit, sunkClubSize);
+        var vertical = WindowForSunkClub(verticalRun, lastHit, sunkClubSize);
+
+        List<Coordinate> sunkCells;
+        if (horizontal is null || vertical is null)
+        {
+            sunkCells = horizontal ?? vertical ?? new List<Coordinate> { lastHit };
+        }
+        else if (horizontalRun.Count != verticalRun.Count)
+        {
+            // The axis whose run the club fills exactly is the club; the longer run spills into a
+            // neighbour's hits.
+            sunkCells = horizontalRun.Count == sunkClubSize ? horizontal
+                : verticalRun.Count == sunkClubSize ? vertical
+                : horizontalRun.Count > verticalRun.Count ? horizontal : vertical;
+        }
+        else
+        {
+            // Both axes could be the club that just dropped (clubs crossing at this cell). Resolving the
+            // wrong one throws away a live lead, so resolve only what they agree on and keep hunting the
+            // rest — a few wasted swings beats forgetting a wounded club.
+            sunkCells = horizontal.Intersect(vertical).ToList();
+        }
 
         foreach (var cell in sunkCells)
         {
             _openHits.Remove(cell);
         }
+
+        _remainingSizes.Remove(sunkClubSize > 0 ? sunkClubSize : sunkCells.Count);
     }
 
+    /// <summary>
+    /// Hits run straight through clubs lying end to end, so the run of hits can be longer than the club
+    /// that just dropped. Returns the window of exactly <paramref name="sunkClubSize"/> cells covering
+    /// the last swing, preferring one that butts against the end of the run (a sunk club's ends touch
+    /// water or the board edge, never another club's hits), or null when this axis cannot hold the club.
+    /// </summary>
+    private static List<Coordinate>? WindowForSunkClub(List<Coordinate> run, Coordinate lastHit, int sunkClubSize)
+    {
+        if (sunkClubSize <= 0)
+        {
+            return run;
+        }
+
+        if (sunkClubSize > run.Count)
+        {
+            return null;
+        }
+
+        var lastHitIndex = run.IndexOf(lastHit);
+        var chosen = Enumerable
+            .Range(0, run.Count - sunkClubSize + 1)
+            .Where(start => start <= lastHitIndex && lastHitIndex < start + sunkClubSize)
+            .OrderBy(start => (start > 0 ? 1 : 0) + (start + sunkClubSize < run.Count ? 1 : 0))
+            .First();
+
+        return run.GetRange(chosen, sunkClubSize);
+    }
+
+    /// <summary>Open hits in a straight line through <paramref name="origin"/>, ordered along the axis.</summary>
     private List<Coordinate> CollectRun(Coordinate origin, int rowStep, int colStep)
     {
         var run = new List<Coordinate> { origin };
@@ -142,7 +265,7 @@ public class HuntTargetAi : IAiPlayer
             }
         }
 
-        return run;
+        return run.OrderBy(c => c.Row).ThenBy(c => c.Col).ToList();
     }
 
     private void RebuildQueueFromOpenHits()

@@ -167,6 +167,30 @@ button.tee:disabled {
     color: var(--fairway-dark);
 }
 
+.character-card .handicap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    align-items: center;
+}
+
+.character-card .win-rate, .character-card .tees {
+    font-size: .8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: .15rem .6rem;
+}
+
+.character-card .win-rate {
+    background: var(--fairway);
+    color: #fff;
+}
+
+.character-card .tees {
+    background: var(--sand);
+    color: var(--fairway-dark);
+}
+
 .boards {
     display: flex;
     flex-wrap: wrap;

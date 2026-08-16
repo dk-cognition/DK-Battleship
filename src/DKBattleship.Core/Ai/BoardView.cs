@@ -18,6 +18,8 @@ public sealed class BoardView
 
     public bool WasShot(Coordinate c) => InBounds(c) && _board[c] is CellState.Hit or CellState.Miss;
 
+    public bool WasHit(Coordinate c) => InBounds(c) && _board[c] == CellState.Hit;
+
     public IEnumerable<Coordinate> AllCells()
     {
         for (var row = 0; row < Rows; row++)

@@ -47,6 +47,29 @@ now guards it.
   `AiTests.ReturnsToHuntModeAfterSinking` (the latter pins the opposite case: after the *last* open
   hit is resolved the AI does go back to hunting).
 
+## 4. Sinking a club in line with another swallowed the neighbour's hits and mis-counted the bag
+
+- **Symptom:** found while adding the four skill levels. With a `Putter` at A1–B1 and a `Hybrid` at
+  C1–E1, the AI hit C1 and D1, then hit A1 and sank the putter at B1 — and went straight back to
+  hunting (`Expected: Target / Actual: Hunt`) even though two hits on the hybrid were still live.
+  Tiger's density hunting was also poisoned: its bag of remaining club sizes lost the `4` (the
+  fairway wood, still afloat) instead of the `2`.
+- **Root cause:** fix #3 attributes a sink to "the straight run of open hits through the sinking
+  cell". Clubs lying end to end make one continuous run, so the four-cell run A1–D1 was credited
+  entirely to the two-cell putter: the hybrid's hits were marked resolved and `_remainingSizes` had
+  the wrong size removed.
+- **Fix:** the sunk club's size is now reported alongside the result —
+  `IAiPlayer.RecordResult(shot, result, sunkClubSize)`, filled in by `Game.AiFire` from the club it
+  just sank, exactly like an opponent calling out "you sank my Putter". `HuntTargetAi` trims the run
+  to a window of that length containing the last swing, preferring the window that butts up against
+  the end of the run (a sunk club's ends touch water or the board edge, never another club's hits).
+  When two clubs *cross* at the finishing cell, both axes hold an equally plausible window; the AI
+  then resolves only the cells the two windows agree on and keeps the rest as leads, because a few
+  wasted swings cost far less than forgetting a wounded club. The remaining-bag bookkeeping uses the
+  reported size rather than the number of cells it managed to attribute, so it cannot drift.
+- **Tests:** `RegressionTests.SinkingAClubInLineWithAnother_LeavesTheNeighboursHitsOpen` and
+  `RegressionTests.SinkingAClubWhereTwoClubsCross_KeepsTheNeighboursLead`.
+
 ## Edge cases checked and deliberately left as-is
 
 These were probed with tests and behave correctly; they are documented so the behaviour is not
