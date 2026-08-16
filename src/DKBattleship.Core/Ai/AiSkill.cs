@@ -8,10 +8,14 @@ namespace DKBattleship.Core.Ai;
 /// Hunt by weighing every legal placement of the clubs still in the bag instead of swinging at a
 /// random cell — the mark of a player who reads the whole course.
 /// </param>
-/// <param name="UseParity">Restrict random hunting to a checkerboard, so no club can be missed.</param>
+/// <param name="UseParity">
+/// Restrict random hunting to a lattice spaced by the shortest club still afloat, so no club can be
+/// missed while covering the course in fewer swings.
+/// </param>
 /// <param name="MistakeChance">
-/// Probability of abandoning the best available swing for a random one. Also drops focus on a
-/// wounded club, which is exactly how weaker players lose holes they had won.
+/// Per-swing probability of a lapse in concentration: the swing goes to a random untried cell,
+/// ignoring both the target queue (walking away from a wounded club) and the hunting logic above.
+/// This is what separates the roster more than anything else.
 /// </param>
 public readonly record struct AiSkill(bool UseDensityHunt, bool UseParity, double MistakeChance)
 {
