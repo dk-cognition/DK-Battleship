@@ -33,7 +33,7 @@ html, body {
 }
 
 /* Each layer is one tiled ball pattern; --tile is both the ball spacing and the
-   distance the layer travels per loop, so the pan is seamless. */
+   distance the layer travels per loop on each axis, so the diagonal pan is seamless. */
 .driving-range .field {
     position: absolute;
     inset: calc(var(--tile) * -2);
@@ -43,29 +43,28 @@ html, body {
     background-size: var(--tile) var(--tile);
     background-position: 0 0, calc(var(--tile) / 2) calc(var(--tile) / 2);
     opacity: var(--layer-opacity);
-    will-change: transform;
-    animation: pan-left var(--pan) linear infinite;
+    animation: pan-up-left var(--pan) linear infinite;
 }
 
 .driving-range .field.near {
     --tile: 24px;
-    --pan: 1.7s;
+    --pan: .7s;
     --layer-opacity: .9;
 }
 
 .driving-range .field.far {
     --tile: 15px;
-    --pan: 2.6s;
+    --pan: 1.1s;
     --layer-opacity: .2;
 }
 
-@keyframes pan-left {
+@keyframes pan-up-left {
     from {
         transform: translate3d(0, 0, 0);
     }
 
     to {
-        transform: translate3d(calc(var(--tile) * -1), 0, 0);
+        transform: translate3d(calc(var(--tile) * -1), calc(var(--tile) * -1), 0);
     }
 }
 
