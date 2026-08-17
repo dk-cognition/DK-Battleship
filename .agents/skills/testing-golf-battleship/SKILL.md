@@ -48,6 +48,24 @@ import('./js/audio.js').then(a=>{
 ```
 Also patch `c.createOscillator` / `c.createBufferSource` to count scheduled voices — a frozen counter
 proves a look-ahead scheduler stopped scheduling, a climbing one proves it is still alive.
+
+To prove one *named* effect recipe fired (and fired exactly once, e.g. an end-of-match cue that must
+not repeat on re-render), count assignments of an oscillator `type` that only that recipe uses:
+```js
+const orig = c.createOscillator.bind(c); window.__saw = 0;
+c.createOscillator = () => { const o = orig(); let t = o.type;
+  Object.defineProperty(o, 'type', { get: () => t, set: v => { t = v; if (v === 'sawtooth') window.__saw++; } });
+  return o; };
+```
+Install it before the first `ensureContext()`, then assert the count is 0 through roster/placement/
+mid-match and jumps by exactly the recipe's voice count at the moment of the event.
+
+Envelope shape is checkable too, not just presence: a healthy cue's RMS decays monotonically to
+0.0000 *before* its sources stop. A tail that plateaus at a few percent of peak and then stops dead
+is a click/pop bug — the usual cause is an LFO connected straight to an enveloped `gain` param
+(signals into an `AudioParam` are *added* to its automation, not multiplied), which needs its own
+gain stage centred on 1 instead.
+
 Reference magnitudes observed for the course-music feature: music bed RMS ≈ 0.005 during fade-in and
 0.018–0.033 once running (~22 voices/s); a shot effect peaks ≈ 0.14; silence reads 0.0000.
 
@@ -65,8 +83,18 @@ Tips:
   (a healthy resync stays near 1x–2x; a pile-up spikes much higher).
 - Preference keys: `battlegolf.musicOn` (music) and `battlegolf.muted` (shot effects) are separate;
   with music off the app may never create an AudioContext at all, which is expected.
+- `import('./js/sound.js')` returns the *same* module instance Blazor uses, so calling `play(...)` on
+  it exercises the real context. Adding a cache-busting query string instead creates a second module
+  with its own `AudioContext`, which your analyser tap will not see (RMS reads 0 forever).
+- The dev server serves `wwwroot` fresh, but the browser HTTP-caches the JS modules; if an edit seems
+  to have no effect, force a revalidated fetch (e.g. Playwright
+  `page.setExtraHTTPHeaders({'Cache-Control':'no-cache'})`). That header makes the
+  `fonts.gstatic.com` requests fail CORS preflight — those console errors are an artifact of the
+  header, not a bug.
 
 ## Gotchas
+- One console error is expected on `main`: a 404 for `DKBattleship.Web.styles.css`, from the
+  scoped-CSS `<link>` in `index.html`. Not a regression.
 - `wmctrl -r :ACTIVE: -b add,maximized_vert,maximized_horz` may fail with "Cannot get client list properties" in this environment; the browser window is already usable, just proceed.
 - Bare console expressions return `undefined`; wrap diagnostics in `console.log(...)`.
 - Verify placement counts with `document.querySelectorAll('.grid')[1].querySelectorAll('.ship').length === 17` (Driver 5 + Fairway Wood 4 + Hybrid 3 + Iron 3 + Putter 2) — `BoardGrid.razor` renders one `button.cell` per board cell, so a count below 17 means a club is missing or overlapping.
