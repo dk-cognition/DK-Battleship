@@ -2,7 +2,7 @@
 // synthesized marimba plucks over a warm pad, with a light shaker and the odd bird call.
 // Everything is generated with Web Audio nodes, so there is no audio asset to download.
 
-import { ensureContext, context, masterGain, noiseSource, envelope, midiToFrequency, onFirstGesture } from "./audio.js";
+import { ensureContext, resume, context, masterGain, noiseSource, envelope, midiToFrequency, onFirstGesture } from "./audio.js";
 
 const MUSIC_KEY = "battlegolf.musicOn";
 const BEAT = 0.85;                 // ~70 BPM: unhurried, like a walk up the fairway
@@ -32,6 +32,8 @@ let musicGain = null;
 let timer = null;
 let nextBarTime = 0;
 let bar = 0;
+let starting = false;
+let awaitingGesture = false;
 
 function readEnabled() {
     try {
@@ -130,33 +132,56 @@ function scheduleAhead() {
         return;
     }
 
+    if (nextBarTime < ctx.currentTime) {
+        // The scheduler fell behind (throttled tab, machine asleep): resync instead of
+        // dumping every overdue bar onto the same instant.
+        nextBarTime = ctx.currentTime + 0.05;
+    }
+
     while (nextBarTime < ctx.currentTime + LOOKAHEAD) {
-        scheduleBar(ctx, bar, Math.max(nextBarTime, ctx.currentTime + 0.05));
+        scheduleBar(ctx, bar, nextBarTime);
         bar++;
         nextBarTime += BAR;
     }
 }
 
+/** Waits for the next user gesture, then retries; autoplay blocks audio until then. */
+function startOnGesture() {
+    if (awaitingGesture) {
+        return;
+    }
+
+    awaitingGesture = true;
+    onFirstGesture(() => {
+        awaitingGesture = false;
+        if (on) {
+            start();
+        }
+    });
+}
+
 function start() {
-    if (timer !== null) {
+    if (timer !== null || starting) {
         return;
     }
 
-    const ctx = ensureContext();
-    if (!ctx) {
+    if (!ensureContext()) {
         return;
     }
 
-    if (ctx.state === "suspended") {
-        // Autoplay is blocked until the visitor interacts with the page.
-        onFirstGesture(() => {
-            if (on) {
-                start();
-            }
-        });
-        return;
-    }
+    starting = true;
+    resume().then(ctx => {
+        starting = false;
+        if (on && timer === null) {
+            begin(ctx);
+        }
+    }).catch(() => {
+        starting = false;
+        startOnGesture();
+    });
+}
 
+function begin(ctx) {
     musicGain = ctx.createGain();
     musicGain.gain.setValueAtTime(0.0001, ctx.currentTime);
     musicGain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 1.5);
@@ -176,10 +201,20 @@ function stop() {
     const ctx = context();
     if (musicGain && ctx) {
         const fadingOut = musicGain;
-        fadingOut.gain.cancelScheduledValues(ctx.currentTime);
-        fadingOut.gain.setValueAtTime(fadingOut.gain.value, ctx.currentTime);
-        fadingOut.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.8);
-        setTimeout(() => fadingOut.disconnect(), 1500);
+        const now = ctx.currentTime;
+
+        // Hold the audible value first: a bare cancelScheduledValues would drop an
+        // in-flight fade-in ramp back to its starting value and cut instead of fade.
+        if (fadingOut.gain.cancelAndHoldAtTime) {
+            fadingOut.gain.cancelAndHoldAtTime(now);
+        } else {
+            fadingOut.gain.cancelScheduledValues(now);
+            fadingOut.gain.setValueAtTime(fadingOut.gain.value, now);
+        }
+
+        fadingOut.gain.linearRampToValueAtTime(0.0001, now + 0.8);
+        // Outlive the longest note already scheduled ahead of the clock.
+        setTimeout(() => fadingOut.disconnect(), (LOOKAHEAD + BAR) * 1000);
     }
 
     musicGain = null;

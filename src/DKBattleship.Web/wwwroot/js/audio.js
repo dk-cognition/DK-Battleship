@@ -26,6 +26,30 @@ export function ensureContext() {
     return ctx;
 }
 
+/**
+ * Resolves with a running context. `ensureContext` only *requests* a resume, and
+ * `state` stays "suspended" until that promise settles, so callers that need audible
+ * output must wait for this instead of reading `state` straight away.
+ */
+export function resume() {
+    const current = ensureContext();
+    if (!current) {
+        return Promise.reject(new Error("Web Audio is unavailable"));
+    }
+
+    if (current.state === "running") {
+        return Promise.resolve(current);
+    }
+
+    return current.resume().then(() => {
+        if (current.state !== "running") {
+            throw new Error("Audio is still suspended");
+        }
+
+        return current;
+    });
+}
+
 export function context() {
     return ctx;
 }
