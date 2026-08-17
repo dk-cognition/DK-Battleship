@@ -207,16 +207,22 @@ function lose(now) {
     sag.gain.linearRampToValueAtTime(0.85, now + 0.16);
     sag.gain.setValueAtTime(0.85, now + 0.45);
     sag.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-    sag.connect(master);
 
     // Slow tremolo so the cluster wobbles like a crowd rather than a single tone.
+    // It is its own stage after the envelope: modulating `sag.gain` directly would
+    // add to the envelope instead of scaling it, leaving a residual tone that clicks
+    // when the sources stop.
+    const tremolo = ctx.createGain();
+    tremolo.gain.value = 1;
+    sag.connect(tremolo).connect(master);
+
     const wobble = ctx.createOscillator();
     wobble.type = "sine";
     wobble.frequency.setValueAtTime(5.5, now);
     wobble.frequency.linearRampToValueAtTime(3.2, now + duration);
     const wobbleDepth = ctx.createGain();
-    wobbleDepth.gain.value = 0.12;
-    wobble.connect(wobbleDepth).connect(sag.gain);
+    wobbleDepth.gain.value = 0.14;
+    wobble.connect(wobbleDepth).connect(tremolo.gain);
     wobble.start(now);
     wobble.stop(now + duration);
 
