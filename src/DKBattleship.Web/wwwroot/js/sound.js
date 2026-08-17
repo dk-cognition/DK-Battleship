@@ -94,10 +94,31 @@ function splash(ctx, master, now) {
     gloop.stop(now + 0.32);
 }
 
+// A UI click: a tiny arcade blip (fast falling square) over a very short noise tick.
+function click(ctx, master, now) {
+    const blip = ctx.createOscillator();
+    blip.type = "square";
+    blip.frequency.setValueAtTime(1150, now);
+    blip.frequency.exponentialRampToValueAtTime(620, now + 0.035);
+    const blipGain = envelope(now, 0.16, 0.001, 0.035);
+    blip.connect(blipGain).connect(master);
+    blip.start(now);
+    blip.stop(now + 0.06);
+
+    const tick = noiseSource(now, 0.03);
+    const highpass = ctx.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 2600;
+    const tickGain = envelope(now, 0.12, 0.001, 0.02);
+    tick.connect(highpass).connect(tickGain).connect(master);
+    tick.stop(now + 0.04);
+}
+
 const recipes = {
     swing,
     bang,
-    splash
+    splash,
+    click
 };
 
 /** Creates/resumes the AudioContext. Must be called from a user gesture. */
@@ -130,6 +151,32 @@ export function play(name, delay) {
     } catch {
         // Blocked or unsupported audio degrades silently.
     }
+}
+
+function onButtonPress(event) {
+    const button = event.target instanceof Element
+        ? event.target.closest("button, [role='button']")
+        : null;
+
+    if (!button || button.disabled || button.classList.contains("cell")) {
+        return;
+    }
+
+    unlock();
+    play("click", 0);
+}
+
+/**
+ * Plays the UI click for every button press in the document, so new buttons need no wiring.
+ * Board cells are skipped: they carry their own swing/bang/splash (or placement) sound.
+ */
+export function registerClickSounds() {
+    document.removeEventListener("pointerdown", onButtonPress, true);
+    document.addEventListener("pointerdown", onButtonPress, true);
+}
+
+export function unregisterClickSounds() {
+    document.removeEventListener("pointerdown", onButtonPress, true);
 }
 
 export function isMuted() {

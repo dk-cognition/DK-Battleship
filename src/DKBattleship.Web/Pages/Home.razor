@@ -209,6 +209,7 @@ else
         {
             _sound = await Js.InvokeAsync<IJSObjectReference>("import", "./js/sound.js");
             _soundMuted = await _sound.InvokeAsync<bool>("isMuted");
+            await _sound.InvokeVoidAsync("registerClickSounds");
             StateHasChanged();
         }
         catch (JSException)
@@ -335,6 +336,7 @@ else
 
             if (_sound is not null)
             {
+                await _sound.InvokeVoidAsync("unregisterClickSounds");
                 await _sound.DisposeAsync();
             }
 
@@ -371,10 +373,11 @@ else
         _game?.NextShipToPlace is not null && _hover is not null
         && _game.PlayerBoard.CanPlace(_game.NextShipToPlace, _hover.Value, _orientation);
 
-    private void PlaceShip(Coordinate coordinate)
+    private async Task PlaceShip(Coordinate coordinate)
     {
         _game?.PlacePlayerShip(coordinate, _orientation);
         _hover = null;
+        await PlaySound("click");
     }
 
     private void RandomPlacement()
