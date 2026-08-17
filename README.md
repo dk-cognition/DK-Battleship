@@ -14,13 +14,14 @@ Battleship played with a bag of golf clubs, against an AI opponent, in the brows
 
 ## The roster
 
-| Character | Title | Wins | How they play |
-| --- | --- | --- | --- |
-| Tiger Woods | The GOAT | ~80% | Probability-density hunting, never loses focus |
-| Jordan Spieth | Major Winner | ~60% | Parity sweep + relentless targeting, occasional wild swing |
-| Jackson Koivun | Amateur Standout | ~40% | Parity sweep, but drops the plot fairly often |
-| Kyle Stalder | Weekend Regular | ~20% | Sprays it around and forgets which hole he was working |
+| Character | Title | Difficulty | Wins | How they play |
+| --- | --- | --- | --- | --- |
+| Tiger Woods | The GOAT | Impossible | ~80% | Probability-density hunting, never loses focus |
+| Jordan Spieth | Major Winner | Hard | ~60% | Parity sweep + relentless targeting, occasional wild swing |
+| Jackson Koivun | Amateur Standout | Medium | ~40% | Parity sweep, but drops the plot fairly often |
+| Kyle Stalder | Weekend Regular | Easy | ~20% | Sprays it around and forgets which hole he was working |
 
+The UI shows only the difficulty tier; the win rates below are the calibration target behind it.
 Win rates are the share of matches each character takes off `AiSkill.ReferenceClubPlayer` — an
 average club player who sweeps at random, chases wounded clubs and gets distracted 40% of the time.
 They are measured, not guessed: `SkillLevelTests` simulates 500 full matches per character through

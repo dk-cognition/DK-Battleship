@@ -286,9 +286,9 @@ button.tee.sound-toggle:hover {
 
 .character-card .handicap {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: .4rem;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .character-card .difficulty, .character-card .tees {
