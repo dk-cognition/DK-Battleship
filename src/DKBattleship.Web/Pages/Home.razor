@@ -10,8 +10,9 @@
 <div class="sound-bar">
     <button type="button"
             class="tee ghost sound-toggle"
-            aria-pressed="@(!_soundMuted)"
-            title="@(_soundMuted ? "Turn sound on" : "Turn sound off")"
+            aria-pressed="@((!_soundMuted).ToString().ToLowerInvariant())"
+            disabled="@(_sound is null)"
+            title="@(_sound is null ? "Sound is unavailable in this browser" : _soundMuted ? "Turn sound on" : "Turn sound off")"
             @onclick="ToggleSound">
         @(_soundMuted ? "\U0001F507 Sound off" : "\U0001F50A Sound on")
     </button>
@@ -151,8 +152,12 @@ else
     private IJSObjectReference? _sound;
     private bool _soundMuted;
 
-    private void StartRound(GolfCharacter character)
+    private async Task StartRound(GolfCharacter character)
     {
+        // The roster click is the earliest user gesture, so open the audio context here
+        // rather than relying on sticky activation when the first swing is played.
+        await UnlockSound();
+
         _game = new Game(character);
         _orientation = Orientation.Horizontal;
         _hover = null;
@@ -210,7 +215,6 @@ else
 
     private async Task ToggleSound()
     {
-        _soundMuted = !_soundMuted;
         if (_sound is null)
         {
             return;
@@ -218,49 +222,61 @@ else
 
         try
         {
-            _soundMuted = await _sound.InvokeAsync<bool>("setMuted", _soundMuted);
+            _soundMuted = await _sound.InvokeAsync<bool>("setMuted", !_soundMuted);
             await _sound.InvokeVoidAsync("unlock");
         }
-        catch (JSException)
-        {
-        }
-        catch (JSDisconnectedException)
+        catch (Exception e) when (IsAudioFailure(e))
         {
         }
     }
 
-    /// <summary>Fires a synthesized sound, ignoring any audio failure so play never breaks.</summary>
-    private async Task PlaySound(string name, double delay = 0)
+    private async Task UnlockSound()
     {
-        if (_sound is null || _soundMuted)
+        if (_sound is null)
         {
             return;
         }
 
         try
         {
-            await _sound.InvokeVoidAsync("play", name, delay);
+            await _sound.InvokeVoidAsync("unlock");
         }
-        catch (JSException)
-        {
-        }
-        catch (JSDisconnectedException)
+        catch (Exception e) when (IsAudioFailure(e))
         {
         }
     }
 
+    private static bool IsAudioFailure(Exception e) =>
+        e is JSException or JSDisconnectedException or ObjectDisposedException;
+
+    /// <summary>Fires the sounds for one shot in a single interop call, ignoring any audio failure.</summary>
     private async Task PlayShotSounds(ShotResult result)
     {
-        await PlaySound("swing");
-
-        switch (result)
+        if (_sound is null || _soundMuted)
         {
-            case ShotResult.Hit:
-                await PlaySound("bang", 0.05);
-                break;
-            case ShotResult.Sunk:
-                await PlaySound("splash", 0.06);
-                break;
+            return;
+        }
+
+        var layered = result switch
+        {
+            ShotResult.Hit => "bang",
+            ShotResult.Sunk => "splash",
+            _ => null
+        };
+
+        try
+        {
+            if (layered is null)
+            {
+                await _sound.InvokeVoidAsync("play", "swing");
+            }
+            else
+            {
+                await _sound.InvokeVoidAsync("play", "swing", layered);
+            }
+        }
+        catch (Exception e) when (IsAudioFailure(e))
+        {
         }
     }
 
@@ -295,7 +311,9 @@ else
 
             if (_sound is not null)
             {
-                await _sound.DisposeAsync();
+                var sound = _sound;
+                _sound = null;
+                await sound.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)
