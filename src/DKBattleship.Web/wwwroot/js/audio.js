@@ -93,13 +93,18 @@ export function midiToFrequency(midi) {
     return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
-/** Runs `start` on the next user gesture when autoplay policy blocks audio now. */
+/**
+ * Runs `start` on the next user gesture when autoplay policy blocks audio now.
+ * Returns a function that unregisters the listeners without running `start`.
+ */
 export function onFirstGesture(start) {
     const events = ["pointerdown", "keydown", "touchstart"];
+    const unregister = () => events.forEach(name => window.removeEventListener(name, handler));
     const handler = () => {
-        events.forEach(name => window.removeEventListener(name, handler));
+        unregister();
         start();
     };
 
     events.forEach(name => window.addEventListener(name, handler, { once: true }));
+    return unregister;
 }

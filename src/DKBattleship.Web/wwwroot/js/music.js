@@ -9,6 +9,7 @@ const BEAT = 0.85;                 // ~70 BPM: unhurried, like a walk up the fai
 const BAR = BEAT * 4;
 const LOOKAHEAD = 2.0;             // seconds of music scheduled ahead of the clock
 const SCHEDULE_INTERVAL = 500;     // ms between scheduling passes
+const LONGEST_TAIL = 1.2;          // seconds a single note can keep ringing
 
 // F major: Fmaj9, Dm9, Bbmaj9, C(add9) -- lazy, resolved, never tense.
 const progression = [
@@ -32,8 +33,8 @@ let musicGain = null;
 let timer = null;
 let nextBarTime = 0;
 let bar = 0;
-let starting = false;
-let awaitingGesture = false;
+let cancelGesture = null;
+let run = 0;   // bumped by stop() so deferred starts from a previous run are ignored
 
 function readEnabled() {
     try {
@@ -147,13 +148,12 @@ function scheduleAhead() {
 
 /** Waits for the next user gesture, then retries; autoplay blocks audio until then. */
 function startOnGesture() {
-    if (awaitingGesture) {
+    if (cancelGesture) {
         return;
     }
 
-    awaitingGesture = true;
-    onFirstGesture(() => {
-        awaitingGesture = false;
+    cancelGesture = onFirstGesture(() => {
+        cancelGesture = null;
         if (on) {
             start();
         }
@@ -161,23 +161,27 @@ function startOnGesture() {
 }
 
 function start() {
-    if (timer !== null || starting) {
+    const ctx = ensureContext();
+    if (!ctx || timer !== null) {
         return;
     }
 
-    if (!ensureContext()) {
+    if (ctx.state === "running") {
+        begin(ctx);
         return;
     }
 
-    starting = true;
-    resume().then(ctx => {
-        starting = false;
-        if (on && timer === null) {
-            begin(ctx);
+    // A resume() issued without user activation stays pending indefinitely rather than
+    // rejecting, so always arm the gesture retry instead of waiting for a failure.
+    startOnGesture();
+
+    const started = run;
+    resume().then(running => {
+        if (on && timer === null && run === started) {
+            begin(running);
         }
     }).catch(() => {
-        starting = false;
-        startOnGesture();
+        // Still blocked: the gesture retry above is what will get us running.
     });
 }
 
@@ -193,6 +197,12 @@ function begin(ctx) {
 }
 
 function stop() {
+    run++;
+    if (cancelGesture) {
+        cancelGesture();
+        cancelGesture = null;
+    }
+
     if (timer !== null) {
         clearInterval(timer);
         timer = null;
@@ -213,8 +223,8 @@ function stop() {
         }
 
         fadingOut.gain.linearRampToValueAtTime(0.0001, now + 0.8);
-        // Outlive the longest note already scheduled ahead of the clock.
-        setTimeout(() => fadingOut.disconnect(), (LOOKAHEAD + BAR) * 1000);
+        // Outlive the tail of the last note already scheduled ahead of the clock.
+        setTimeout(() => fadingOut.disconnect(), (LOOKAHEAD + BAR + LONGEST_TAIL) * 1000);
     }
 
     musicGain = null;
@@ -250,12 +260,6 @@ export function isMusicOn() {
 export function setMusicOn(value) {
     on = !!value;
     try {
-        localStorage.setItem(MUSIC_KEY, on ? "true" : "false");
-    } catch {
-        // Persistence is best effort.
-    }
-
-    try {
         if (on) {
             start();
         } else {
@@ -263,6 +267,13 @@ export function setMusicOn(value) {
         }
     } catch {
         on = false;
+    }
+
+    // Persisted after the fact so a failed start is not remembered as "on".
+    try {
+        localStorage.setItem(MUSIC_KEY, on ? "true" : "false");
+    } catch {
+        // Persistence is best effort.
     }
 
     return on;
