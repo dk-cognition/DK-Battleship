@@ -517,6 +517,7 @@ button.tee.sound-toggle:hover {
 
 .markdown code {
     font-size: .85em;
+    overflow-wrap: anywhere;
     background: var(--sky);
     border-radius: 3px;
     padding: .1em .35em;

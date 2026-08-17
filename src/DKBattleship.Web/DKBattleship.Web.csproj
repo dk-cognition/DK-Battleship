@@ -12,9 +12,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.30" PrivateAssets="all" />
   </ItemGroup>
 
-  <!-- The debugging log lives at the repo root but is served by the app, so it ships as a static asset. -->
+  <!-- The debugging log lives at the repo root; embedding it keeps one copy and one code path for dev and published builds. -->
   <ItemGroup>
-    <Content Include="..\..\DEBUGGING.md" Link="wwwroot\DEBUGGING.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <EmbeddedResource Include="..\..\DEBUGGING.md" LogicalName="DEBUGGING.md" />
   </ItemGroup>
 
   <ItemGroup>

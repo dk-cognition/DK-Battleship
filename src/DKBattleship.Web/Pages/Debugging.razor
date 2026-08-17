@@ -1,6 +1,6 @@
 @page "/debugging"
+@using System.Reflection
 @using Markdig
-@inject HttpClient Http
 
 <PageTitle>BattleGolf &mdash; Debugging log</PageTitle>
 
@@ -10,17 +10,13 @@
         <a href="https://github.com/dk-cognition/DK-Battleship/blob/main/DEBUGGING.md" target="_blank" rel="noopener">View on GitHub</a>
     </div>
 
-    @if (_error is not null)
+    @if (Log is null)
     {
-        <p role="alert">@_error</p>
-    }
-    else if (_html is null)
-    {
-        <p>Reading the scorecard&hellip;</p>
+        <p role="alert">Couldn't load the debugging log. It's also on GitHub.</p>
     }
     else
     {
-        <article class="markdown">@_html</article>
+        <article class="markdown">@Log</article>
     }
 
     <p class="debug-log-back">
@@ -29,24 +25,23 @@
 </div>
 
 @code {
-    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .DisableHtml()
-        .Build();
+    private static readonly MarkupString? Log = Render();
 
-    private MarkupString? _html;
-    private string? _error;
-
-    protected override async Task OnInitializedAsync()
+    private static MarkupString? Render()
     {
-        try
+        using var stream = typeof(Debugging).Assembly.GetManifestResourceStream("DEBUGGING.md");
+
+        if (stream is null)
         {
-            var markdown = await Http.GetStringAsync("DEBUGGING.md");
-            _html = new MarkupString(Markdown.ToHtml(markdown, Pipeline));
+            return null;
         }
-        catch (HttpRequestException)
-        {
-            _error = "Couldn't load the debugging log. It's also on GitHub.";
-        }
+
+        using var reader = new StreamReader(stream);
+        var pipeline = new MarkdownPipelineBuilder()
+            .UseAdvancedExtensions()
+            .DisableHtml()
+            .Build();
+
+        return new MarkupString(Markdown.ToHtml(reader.ReadToEnd(), pipeline));
     }
 }
