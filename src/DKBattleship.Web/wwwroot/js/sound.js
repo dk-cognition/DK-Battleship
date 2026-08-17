@@ -145,10 +145,50 @@ function splash(now) {
     gloop.stop(now + 0.32);
 }
 
+// A win: a bright rising arpeggio of plucked tones over a crowd-ish noise swell.
+function fanfare(now) {
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+    notes.forEach((frequency, index) => {
+        const start = now + index * 0.11;
+
+        const tone = ctx.createOscillator();
+        tone.type = "triangle";
+        tone.frequency.setValueAtTime(frequency, start);
+        const toneGain = envelope(start, 0.32, 0.008, 0.34);
+        tone.connect(toneGain).connect(master);
+        tone.start(start);
+        tone.stop(start + 0.4);
+
+        const shine = ctx.createOscillator();
+        shine.type = "sine";
+        shine.frequency.setValueAtTime(frequency * 2, start);
+        const shineGain = envelope(start, 0.1, 0.006, 0.2);
+        shine.connect(shineGain).connect(master);
+        shine.start(start);
+        shine.stop(start + 0.26);
+    });
+
+    const crowd = noiseSource(now, 1.2);
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.Q.value = 0.7;
+    bandpass.frequency.setValueAtTime(700, now);
+    bandpass.frequency.exponentialRampToValueAtTime(2200, now + 0.5);
+    bandpass.frequency.exponentialRampToValueAtTime(900, now + 1.1);
+
+    const crowdGain = ctx.createGain();
+    crowdGain.gain.setValueAtTime(0.0001, now);
+    crowdGain.gain.linearRampToValueAtTime(0.2, now + 0.35);
+    crowdGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.15);
+    crowd.connect(bandpass).connect(crowdGain).connect(master);
+    crowd.stop(now + 1.2);
+}
+
 const recipes = {
     swing,
     bang,
-    splash
+    splash,
+    fanfare
 };
 
 /** Creates/resumes the AudioContext. Must be called from a user gesture. */
