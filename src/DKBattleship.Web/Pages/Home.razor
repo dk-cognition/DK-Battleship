@@ -152,6 +152,7 @@ else
     private IJSObjectReference? _confetti;
     private bool _soundMuted;
     private bool _celebrated;
+    private bool _lossGroaned;
 
     private async Task StartRound(GolfCharacter character)
     {
@@ -161,6 +162,7 @@ else
         _orientation = Orientation.Horizontal;
         _hover = null;
         _aiSwinging = false;
+        _lossGroaned = false;
         _log.Clear();
     }
 
@@ -326,6 +328,18 @@ else
         }
     }
 
+    /// <summary>Plays the gallery's "awwww" once, the first time the match is lost.</summary>
+    private async Task PlayLossSound()
+    {
+        if (_lossGroaned || _game?.Status != GameStatus.AiWon)
+        {
+            return;
+        }
+
+        _lossGroaned = true;
+        await PlaySound("lose", 0.35);
+    }
+
     [JSInvokable]
     public void HandleKey(string key)
     {
@@ -439,6 +453,7 @@ else
             var aiShot = _game.AiFire();
             _log.Insert(0, _game.StatusMessage);
             await PlayShotSounds(aiShot.Result);
+            await PlayLossSound();
         }
         finally
         {
