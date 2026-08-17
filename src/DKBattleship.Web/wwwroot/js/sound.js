@@ -184,11 +184,92 @@ function fanfare(now) {
     crowd.stop(now + 1.2);
 }
 
+// A deflated gallery groan: a cluster of slightly detuned sawtooth voices sliding down
+// through vowel-ish formant bandpasses, with a long sighing decay.
+function lose(now) {
+    const voices = [
+        { start: 232, end: 138, detune: -9, level: 0.48 },
+        { start: 228, end: 132, detune: 6, level: 0.42 },
+        { start: 175, end: 98, detune: -14, level: 0.35 },
+        { start: 348, end: 196, detune: 11, level: 0.19 }
+    ];
+
+    // "aw" formants, drifting toward a darker "uh" as the groan sags.
+    const formants = [
+        { start: 730, end: 570, q: 5, level: 1 },
+        { start: 1090, end: 840, q: 7, level: 0.5 },
+        { start: 2440, end: 2200, q: 9, level: 0.14 }
+    ];
+
+    const duration = 1.7;
+    const sag = ctx.createGain();
+    sag.gain.setValueAtTime(0.0001, now);
+    sag.gain.linearRampToValueAtTime(0.85, now + 0.16);
+    sag.gain.setValueAtTime(0.85, now + 0.45);
+    sag.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    sag.connect(master);
+
+    // Slow tremolo so the cluster wobbles like a crowd rather than a single tone.
+    const wobble = ctx.createOscillator();
+    wobble.type = "sine";
+    wobble.frequency.setValueAtTime(5.5, now);
+    wobble.frequency.linearRampToValueAtTime(3.2, now + duration);
+    const wobbleDepth = ctx.createGain();
+    wobbleDepth.gain.value = 0.12;
+    wobble.connect(wobbleDepth).connect(sag.gain);
+    wobble.start(now);
+    wobble.stop(now + duration);
+
+    const bands = formants.map(formant => {
+        const band = ctx.createBiquadFilter();
+        band.type = "bandpass";
+        band.Q.value = formant.q;
+        band.frequency.setValueAtTime(formant.start, now);
+        band.frequency.exponentialRampToValueAtTime(formant.end, now + duration);
+
+        const trim = ctx.createGain();
+        trim.gain.value = formant.level;
+        band.connect(trim).connect(sag);
+        return band;
+    });
+
+    for (const voice of voices) {
+        const osc = ctx.createOscillator();
+        osc.type = "sawtooth";
+        osc.detune.value = voice.detune;
+        osc.frequency.setValueAtTime(voice.start, now);
+        osc.frequency.setValueAtTime(voice.start, now + 0.28);
+        osc.frequency.exponentialRampToValueAtTime(voice.end, now + duration * 0.85);
+
+        const level = ctx.createGain();
+        level.gain.value = voice.level;
+        osc.connect(level);
+        for (const band of bands) {
+            level.connect(band);
+        }
+
+        osc.start(now);
+        osc.stop(now + duration);
+    }
+
+    // A breathy layer so the groan has crowd air in it, not just tone.
+    const breath = noiseSource(now, duration);
+    const air = ctx.createBiquadFilter();
+    air.type = "bandpass";
+    air.Q.value = 0.9;
+    air.frequency.setValueAtTime(760, now);
+    air.frequency.exponentialRampToValueAtTime(280, now + duration);
+    const breathGain = envelope(now, 0.08, 0.2, duration - 0.2);
+    breath.connect(air).connect(breathGain).connect(master);
+    breath.stop(now + duration);
+}
+
 const recipes = {
     swing,
     bang,
     splash,
-    fanfare
+    fanfare,
+    lose
 };
 
 /** Creates/resumes the AudioContext. Must be called from a user gesture. */
