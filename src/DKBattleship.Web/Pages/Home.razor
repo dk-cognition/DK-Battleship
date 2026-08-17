@@ -15,6 +15,13 @@
             @onclick="ToggleSound">
         @(_soundMuted ? "\U0001F507 Sound off" : "\U0001F50A Sound on")
     </button>
+    <button type="button"
+            class="tee ghost sound-toggle"
+            aria-pressed="@_musicOn"
+            title="@(_musicOn ? "Turn music off" : "Turn music on")"
+            @onclick="ToggleMusic">
+        @(_musicOn ? "\U0001F3B5 Music on" : "\U0001F3B5 Music off")
+    </button>
 </div>
 
 @if (_game is null)
@@ -149,7 +156,9 @@ else
     private DotNetObjectReference<Home>? _selfReference;
     private IJSObjectReference? _keyboard;
     private IJSObjectReference? _sound;
+    private IJSObjectReference? _music;
     private bool _soundMuted;
+    private bool _musicOn;
 
     private void StartRound(GolfCharacter character)
     {
@@ -205,6 +214,37 @@ else
         catch (JSException)
         {
             _sound = null;
+        }
+
+        try
+        {
+            _music = await Js.InvokeAsync<IJSObjectReference>("import", "./js/music.js");
+            _musicOn = await _music.InvokeAsync<bool>("init");
+            StateHasChanged();
+        }
+        catch (JSException)
+        {
+            _music = null;
+        }
+    }
+
+    private async Task ToggleMusic()
+    {
+        _musicOn = !_musicOn;
+        if (_music is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _musicOn = await _music.InvokeAsync<bool>("setMusicOn", _musicOn);
+        }
+        catch (JSException)
+        {
+        }
+        catch (JSDisconnectedException)
+        {
         }
     }
 
@@ -296,6 +336,12 @@ else
             if (_sound is not null)
             {
                 await _sound.DisposeAsync();
+            }
+
+            if (_music is not null)
+            {
+                await _music.InvokeVoidAsync("stopMusic");
+                await _music.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)
