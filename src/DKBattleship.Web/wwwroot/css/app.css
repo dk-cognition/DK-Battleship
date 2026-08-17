@@ -236,6 +236,8 @@ button.tee:disabled {
 
 .sound-bar {
     display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
     justify-content: flex-end;
     margin-top: .75rem;
 }

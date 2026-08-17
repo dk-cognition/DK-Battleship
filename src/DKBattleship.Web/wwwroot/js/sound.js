@@ -1,11 +1,10 @@
-// Tiny synthesized sound layer: no audio assets, everything is built with Web Audio nodes.
+// Tiny synthesized effect layer: no audio assets, everything is built with Web Audio nodes.
 // Recipes are keyed by name so new sounds ("win", "lose", ...) are a one-entry addition.
+
+import { ensureContext, context, masterGain, noiseSource, envelope } from "./audio.js";
 
 const MUTE_KEY = "battlegolf.muted";
 
-let ctx = null;
-let master = null;
-let noise = null;
 let muted = readMuted();
 
 function readMuted() {
@@ -16,59 +15,9 @@ function readMuted() {
     }
 }
 
-function ensureContext() {
-    if (!ctx) {
-        const Ctor = window.AudioContext || window.webkitAudioContext;
-        if (!Ctor) {
-            return null;
-        }
-
-        ctx = new Ctor();
-        master = ctx.createGain();
-        master.gain.value = 0.5;
-        master.connect(ctx.destination);
-    }
-
-    if (ctx.state === "suspended") {
-        ctx.resume().catch(() => { });
-    }
-
-    return ctx;
-}
-
-/** White noise buffer, built once and shared by every noise-based recipe. */
-function noiseBuffer() {
-    if (!noise) {
-        const length = Math.floor(ctx.sampleRate * 1.2);
-        noise = ctx.createBuffer(1, length, ctx.sampleRate);
-        const data = noise.getChannelData(0);
-        for (let i = 0; i < length; i++) {
-            data[i] = Math.random() * 2 - 1;
-        }
-    }
-
-    return noise;
-}
-
-function noiseSource(start, duration) {
-    const source = ctx.createBufferSource();
-    source.buffer = noiseBuffer();
-    source.loop = true;
-    source.start(start, Math.random() * 0.5, duration);
-    return source;
-}
-
-function envelope(start, peak, attack, decay) {
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.linearRampToValueAtTime(peak, start + attack);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + attack + decay);
-    return gain;
-}
-
 // A golf strike: a very short, bright noise transient with an almost instant decay,
 // plus a fast falling sine "ping" for the compressed-ball ring.
-function swing(now) {
+function swing(ctx, master, now) {
     const body = noiseSource(now, 0.12);
     const bandpass = ctx.createBiquadFilter();
     bandpass.type = "bandpass";
@@ -95,7 +44,7 @@ function swing(now) {
 }
 
 // A hit: percussive low sine sweep (the thump) under a lowpassed noise burst (the crack).
-function bang(now) {
+function bang(ctx, master, now) {
     const boom = ctx.createOscillator();
     boom.type = "sine";
     boom.frequency.setValueAtTime(180, now);
@@ -118,7 +67,7 @@ function bang(now) {
 
 // A splash: filtered noise whose bandpass sweeps up fast (the entry) then falls away
 // (the spray settling), with a low "gloop" for the displaced water.
-function splash(now) {
+function splash(ctx, master, now) {
     const water = noiseSource(now, 0.8);
     const bandpass = ctx.createBiquadFilter();
     bandpass.type = "bandpass";
@@ -176,7 +125,8 @@ export function play(name, delay) {
             return;
         }
 
-        recipe(ctx.currentTime + 0.005 + (delay > 0 ? delay : 0));
+        const ctx = context();
+        recipe(ctx, masterGain(), ctx.currentTime + 0.005 + (delay > 0 ? delay : 0));
     } catch {
         // Blocked or unsupported audio degrades silently.
     }
