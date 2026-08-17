@@ -234,6 +234,14 @@ button.tee:disabled {
     cursor: not-allowed;
 }
 
+/* Win celebration overlay: sits above the UI but never intercepts clicks. */
+.confetti-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 900;
+}
+
 .sound-bar {
     display: flex;
     justify-content: flex-end;
