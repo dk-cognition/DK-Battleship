@@ -58,6 +58,16 @@ function noiseSource(start, duration) {
     return source;
 }
 
+/** Tears the whole chain down once `source` finishes, so nodes cannot accumulate. */
+function releaseWhenDone(source, ...nodes) {
+    source.onended = () => {
+        source.disconnect();
+        for (const node of nodes) {
+            node.disconnect();
+        }
+    };
+}
+
 function envelope(start, peak, attack, decay) {
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, start);
@@ -83,6 +93,7 @@ function swing(now) {
     const noiseGain = envelope(now, 0.9, 0.001, 0.06);
     body.connect(bandpass).connect(highpass).connect(noiseGain).connect(master);
     body.stop(now + 0.12);
+    releaseWhenDone(body, bandpass, highpass, noiseGain);
 
     const ping = ctx.createOscillator();
     ping.type = "triangle";
@@ -92,6 +103,7 @@ function swing(now) {
     ping.connect(pingGain).connect(master);
     ping.start(now);
     ping.stop(now + 0.09);
+    releaseWhenDone(ping, pingGain);
 }
 
 // A hit: percussive low sine sweep (the thump) under a lowpassed noise burst (the crack).
@@ -104,6 +116,7 @@ function bang(now) {
     boom.connect(boomGain).connect(master);
     boom.start(now);
     boom.stop(now + 0.4);
+    releaseWhenDone(boom, boomGain);
 
     const crack = noiseSource(now, 0.3);
     const lowpass = ctx.createBiquadFilter();
@@ -114,6 +127,7 @@ function bang(now) {
     const crackGain = envelope(now, 0.55, 0.002, 0.24);
     crack.connect(lowpass).connect(crackGain).connect(master);
     crack.stop(now + 0.3);
+    releaseWhenDone(crack, lowpass, crackGain);
 }
 
 // A splash: filtered noise whose bandpass sweeps up fast (the entry) then falls away
@@ -134,6 +148,7 @@ function splash(now) {
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.62);
     water.connect(bandpass).connect(gain).connect(master);
     water.stop(now + 0.7);
+    releaseWhenDone(water, bandpass, gain);
 
     const gloop = ctx.createOscillator();
     gloop.type = "sine";
@@ -143,12 +158,19 @@ function splash(now) {
     gloop.connect(gloopGain).connect(master);
     gloop.start(now + 0.02);
     gloop.stop(now + 0.32);
+    releaseWhenDone(gloop, gloopGain);
 }
 
 const recipes = {
     swing,
     bang,
     splash
+};
+
+// Seconds a layered sound trails the start of the group it is played with.
+const layerOffsets = {
+    bang: 0.05,
+    splash: 0.06
 };
 
 /** Creates/resumes the AudioContext. Must be called from a user gesture. */
@@ -160,14 +182,12 @@ export function unlock() {
     }
 }
 
-/** Plays a recipe by name, optionally offset by `delay` seconds so sounds can be layered. */
-export function play(name, delay) {
+/**
+ * Plays one or more recipes by name. Every name after the first is layered onto the same
+ * start time using the offsets baked into `layers`, so layering never drifts with interop latency.
+ */
+export function play(...names) {
     if (muted) {
-        return;
-    }
-
-    const recipe = recipes[name];
-    if (!recipe) {
         return;
     }
 
@@ -176,7 +196,13 @@ export function play(name, delay) {
             return;
         }
 
-        recipe(ctx.currentTime + 0.005 + (delay > 0 ? delay : 0));
+        const start = ctx.currentTime + 0.005;
+        for (const name of names) {
+            const recipe = recipes[name];
+            if (recipe) {
+                recipe(start + (layerOffsets[name] ?? 0));
+            }
+        }
     } catch {
         // Blocked or unsupported audio degrades silently.
     }
