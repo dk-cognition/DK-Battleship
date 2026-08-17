@@ -7,6 +7,16 @@
 
 <PageTitle>BattleGolf</PageTitle>
 
+<div class="sound-bar">
+    <button type="button"
+            class="tee ghost sound-toggle"
+            aria-pressed="@(!_soundMuted)"
+            title="@(_soundMuted ? "Turn sound on" : "Turn sound off")"
+            @onclick="ToggleSound">
+        @(_soundMuted ? "\U0001F507 Sound off" : "\U0001F50A Sound on")
+    </button>
+</div>
+
 @if (_game is null)
 {
     <div class="panel">
@@ -138,6 +148,8 @@ else
     private bool _aiSwinging;
     private DotNetObjectReference<Home>? _selfReference;
     private IJSObjectReference? _keyboard;
+    private IJSObjectReference? _sound;
+    private bool _soundMuted;
 
     private void StartRound(GolfCharacter character)
     {
@@ -183,6 +195,73 @@ else
         _selfReference = DotNetObjectReference.Create(this);
         _keyboard = await Js.InvokeAsync<IJSObjectReference>("import", "./js/keyboard.js");
         await _keyboard.InvokeVoidAsync("register", _selfReference);
+
+        try
+        {
+            _sound = await Js.InvokeAsync<IJSObjectReference>("import", "./js/sound.js");
+            _soundMuted = await _sound.InvokeAsync<bool>("isMuted");
+            StateHasChanged();
+        }
+        catch (JSException)
+        {
+            _sound = null;
+        }
+    }
+
+    private async Task ToggleSound()
+    {
+        _soundMuted = !_soundMuted;
+        if (_sound is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _soundMuted = await _sound.InvokeAsync<bool>("setMuted", _soundMuted);
+            await _sound.InvokeVoidAsync("unlock");
+        }
+        catch (JSException)
+        {
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    /// <summary>Fires a synthesized sound, ignoring any audio failure so play never breaks.</summary>
+    private async Task PlaySound(string name, double delay = 0)
+    {
+        if (_sound is null || _soundMuted)
+        {
+            return;
+        }
+
+        try
+        {
+            await _sound.InvokeVoidAsync("play", name, delay);
+        }
+        catch (JSException)
+        {
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    private async Task PlayShotSounds(ShotResult result)
+    {
+        await PlaySound("swing");
+
+        switch (result)
+        {
+            case ShotResult.Hit:
+                await PlaySound("bang", 0.05);
+                break;
+            case ShotResult.Sunk:
+                await PlaySound("splash", 0.06);
+                break;
+        }
     }
 
     [JSInvokable]
@@ -212,6 +291,11 @@ else
             {
                 await _keyboard.InvokeVoidAsync("unregister");
                 await _keyboard.DisposeAsync();
+            }
+
+            if (_sound is not null)
+            {
+                await _sound.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)
@@ -267,6 +351,7 @@ else
         }
 
         _log.Insert(0, _game.StatusMessage);
+        await PlayShotSounds(result);
 
         if (_game.Status != GameStatus.AiTurn)
         {
@@ -278,8 +363,9 @@ else
         try
         {
             await Task.Delay(650);
-            _game.AiFire();
+            var aiShot = _game.AiFire();
             _log.Insert(0, _game.StatusMessage);
+            await PlayShotSounds(aiShot.Result);
         }
         finally
         {
