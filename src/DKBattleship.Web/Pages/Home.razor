@@ -157,15 +157,21 @@ else
     private IJSObjectReference? _keyboard;
     private IJSObjectReference? _sound;
     private IJSObjectReference? _music;
+    private IJSObjectReference? _confetti;
     private bool _soundMuted;
     private bool _musicOn;
+    private bool _celebrated;
+    private bool _lossGroaned;
 
-    private void StartRound(GolfCharacter character)
+    private async Task StartRound(GolfCharacter character)
     {
+        await StopConfetti();
+        _celebrated = false;
         _game = new Game(character);
         _orientation = Orientation.Horizontal;
         _hover = null;
         _aiSwinging = false;
+        _lossGroaned = false;
         _log.Clear();
     }
 
@@ -185,8 +191,10 @@ else
         _ => "Forward tees"
     };
 
-    private void BackToRoster()
+    private async Task BackToRoster()
     {
+        await StopConfetti();
+        _celebrated = false;
         _game = null;
         _log.Clear();
     }
@@ -227,6 +235,15 @@ else
         {
             _music = null;
         }
+
+        try
+        {
+            _confetti = await Js.InvokeAsync<IJSObjectReference>("import", "./js/confetti.js");
+        }
+        catch (JSException)
+        {
+            _confetti = null;
+        }
     }
 
     private async Task ToggleMusic()
@@ -240,6 +257,53 @@ else
         try
         {
             _musicOn = await _music.InvokeAsync<bool>("setMusicOn", _musicOn);
+        }
+        catch (JSException)
+        {
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    /// <summary>Celebrates a win exactly once: fanfare plus a few seconds of confetti.</summary>
+    private async Task CelebrateWin()
+    {
+        if (_celebrated)
+        {
+            return;
+        }
+
+        _celebrated = true;
+        await PlaySound("fanfare", 0.15);
+
+        if (_confetti is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _confetti.InvokeVoidAsync("start");
+        }
+        catch (JSException)
+        {
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    private async Task StopConfetti()
+    {
+        if (_confetti is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _confetti.InvokeVoidAsync("stop");
         }
         catch (JSException)
         {
@@ -305,6 +369,18 @@ else
         }
     }
 
+    /// <summary>Plays the gallery's "awwww" once, the first time the match is lost.</summary>
+    private async Task PlayLossSound()
+    {
+        if (_lossGroaned || _game?.Status != GameStatus.AiWon)
+        {
+            return;
+        }
+
+        _lossGroaned = true;
+        await PlaySound("lose", 0.35);
+    }
+
     [JSInvokable]
     public void HandleKey(string key)
     {
@@ -344,6 +420,12 @@ else
             {
                 await _music.InvokeVoidAsync("stopMusic");
                 await _music.DisposeAsync();
+            }
+
+            if (_confetti is not null)
+            {
+                await _confetti.InvokeVoidAsync("stop");
+                await _confetti.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)
@@ -402,6 +484,11 @@ else
         _log.Insert(0, _game.StatusMessage);
         await PlayShotSounds(result);
 
+        if (_game.Status == GameStatus.PlayerWon)
+        {
+            await CelebrateWin();
+        }
+
         if (_game.Status != GameStatus.AiTurn)
         {
             return;
@@ -415,6 +502,7 @@ else
             var aiShot = _game.AiFire();
             _log.Insert(0, _game.StatusMessage);
             await PlayShotSounds(aiShot.Result);
+            await PlayLossSound();
         }
         finally
         {
