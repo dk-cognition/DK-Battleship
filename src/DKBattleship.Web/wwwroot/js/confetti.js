@@ -4,6 +4,8 @@
 const COLORS = ["#f5d76e", "#7fc97f", "#4a90d9", "#e8674f", "#ffffff", "#d9a94a"];
 const PIECES = 220;
 const DURATION_MS = 4500;
+// Pieces start just above the viewport so even the slowest ones fall into view well inside the run.
+const SPAWN_BAND = 220;
 
 let canvas = null;
 let frame = 0;
@@ -17,12 +19,12 @@ function reducedMotion() {
     }
 }
 
-function createPieces(width, height) {
+function createPieces(width) {
     const list = [];
     for (let i = 0; i < PIECES; i++) {
         list.push({
             x: Math.random() * width,
-            y: -Math.random() * height,
+            y: -20 - Math.random() * SPAWN_BAND,
             width: 5 + Math.random() * 6,
             height: 8 + Math.random() * 8,
             speed: 70 + Math.random() * 150,
@@ -58,12 +60,12 @@ export function start() {
             return;
         }
 
-        pieces = createPieces(canvas.width, canvas.height);
+        pieces = createPieces(canvas.width);
 
         const began = performance.now();
         let previous = began;
 
-        const draw = now => {
+        const paint = now => {
             const elapsed = now - began;
             const delta = Math.min((now - previous) / 1000, 0.05);
             previous = now;
@@ -93,12 +95,21 @@ export function start() {
                 context.restore();
             }
 
-            if (elapsed >= DURATION_MS) {
-                stop();
-                return;
-            }
+            return elapsed < DURATION_MS;
+        };
 
-            frame = requestAnimationFrame(draw);
+        const draw = now => {
+            try {
+                if (!paint(now)) {
+                    stop();
+                    return;
+                }
+
+                frame = requestAnimationFrame(draw);
+            } catch {
+                // Decoration only: never let it break the game, and never leave the canvas behind.
+                stop();
+            }
         };
 
         frame = requestAnimationFrame(draw);
