@@ -115,6 +115,7 @@ else
                 <h3>@_game.Opponent.Name's course <small>@(_game.Status == GameStatus.PlayerTurn ? "your swing" : "wait for the group ahead")</small></h3>
                 <BoardGrid Board="_game.AiBoard"
                            Clickable="@(_game.Status == GameStatus.PlayerTurn)"
+                           SinkingCells="_aiBoardSinking"
                            OnCellClick="Fire" />
                 <ul class="bag">
                     @foreach (var ship in _game.AiBoard.Ships)
@@ -125,7 +126,7 @@ else
             </div>
             <div class="board-wrap">
                 <h3>Your course</h3>
-                <BoardGrid Board="_game.PlayerBoard" RevealShips="true" />
+                <BoardGrid Board="_game.PlayerBoard" RevealShips="true" SinkingCells="_playerBoardSinking" />
                 <ul class="bag">
                     @foreach (var ship in _game.PlayerBoard.Ships)
                     {
@@ -162,6 +163,11 @@ else
     private bool _musicOn;
     private bool _celebrated;
     private bool _lossGroaned;
+    private IReadOnlyCollection<Coordinate>? _aiBoardSinking;
+    private IReadOnlyCollection<Coordinate>? _playerBoardSinking;
+
+    /// <summary>How long a sunk club's cells keep splashing.</summary>
+    private const int SinkAnimationMs = 1200;
 
     private async Task StartRound(GolfCharacter character)
     {
@@ -172,6 +178,8 @@ else
         _hover = null;
         _aiSwinging = false;
         _lossGroaned = false;
+        _aiBoardSinking = null;
+        _playerBoardSinking = null;
         _log.Clear();
     }
 
@@ -195,6 +203,8 @@ else
     {
         await StopConfetti();
         _celebrated = false;
+        _aiBoardSinking = null;
+        _playerBoardSinking = null;
         _game = null;
         _log.Clear();
     }
@@ -354,6 +364,37 @@ else
         }
     }
 
+    /// <summary>
+    /// Splashes a sunk club's cells for a moment. Callers deliberately don't await it, so the
+    /// animation plays over the rest of the turn instead of delaying it.
+    /// </summary>
+    private async Task SplashSunkClub(Ship ship, bool onOpponentBoard)
+    {
+        var cells = ship.Coordinates.ToList();
+        if (onOpponentBoard)
+        {
+            _aiBoardSinking = cells;
+        }
+        else
+        {
+            _playerBoardSinking = cells;
+        }
+
+        StateHasChanged();
+        await Task.Delay(SinkAnimationMs);
+
+        if (onOpponentBoard && ReferenceEquals(_aiBoardSinking, cells))
+        {
+            _aiBoardSinking = null;
+        }
+        else if (!onOpponentBoard && ReferenceEquals(_playerBoardSinking, cells))
+        {
+            _playerBoardSinking = null;
+        }
+
+        StateHasChanged();
+    }
+
     private async Task PlayShotSounds(ShotResult result)
     {
         await PlaySound("swing");
@@ -475,6 +516,7 @@ else
             return;
         }
 
+        var sunkClub = _game.AiBoard.ShipAt(coordinate);
         var result = _game.PlayerFire(coordinate);
         if (result == ShotResult.AlreadyShot)
         {
@@ -482,6 +524,11 @@ else
         }
 
         _log.Insert(0, _game.StatusMessage);
+        if (result == ShotResult.Sunk && sunkClub is not null)
+        {
+            _ = SplashSunkClub(sunkClub, onOpponentBoard: true);
+        }
+
         await PlayShotSounds(result);
 
         if (_game.Status == GameStatus.PlayerWon)
@@ -501,6 +548,11 @@ else
             await Task.Delay(650);
             var aiShot = _game.AiFire();
             _log.Insert(0, _game.StatusMessage);
+            if (aiShot.Result == ShotResult.Sunk && _game.PlayerBoard.ShipAt(aiShot.Coordinate) is { } club)
+            {
+                _ = SplashSunkClub(club, onOpponentBoard: false);
+            }
+
             await PlayShotSounds(aiShot.Result);
             await PlayLossSound();
         }

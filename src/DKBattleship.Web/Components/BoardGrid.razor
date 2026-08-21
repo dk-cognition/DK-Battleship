@@ -42,6 +42,10 @@
     [Parameter]
     public bool PreviewValid { get; set; } = true;
 
+    /// <summary>Cells of a club that has just gone in the hole, played as a splash animation.</summary>
+    [Parameter]
+    public IReadOnlyCollection<Coordinate>? SinkingCells { get; set; }
+
     [Parameter]
     public EventCallback<Coordinate> OnCellClick { get; set; }
 
@@ -73,6 +77,11 @@
         if (Clickable && state is CellState.Empty or CellState.Ship)
         {
             classes = $"{classes} clickable".Trim();
+        }
+
+        if (SinkingCells is not null && SinkingCells.Contains(coordinate))
+        {
+            classes = $"{classes} sinking".Trim();
         }
 
         return classes;
