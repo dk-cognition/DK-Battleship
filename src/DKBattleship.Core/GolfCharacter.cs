@@ -15,7 +15,8 @@ public class GolfCharacter
         string avatar,
         Func<Random, IAiPlayer> strategyFactory,
         double expectedWinRate,
-        IReadOnlyList<string>? taunts = null)
+        IReadOnlyList<string>? taunts = null,
+        int? swingCap = null)
     {
         Name = name;
         Title = title;
@@ -24,6 +25,7 @@ public class GolfCharacter
         StrategyFactory = strategyFactory;
         ExpectedWinRate = expectedWinRate;
         Taunts = taunts ?? Array.Empty<string>();
+        SwingCap = swingCap;
     }
 
     public string Name { get; }
@@ -45,6 +47,13 @@ public class GolfCharacter
 
     public IReadOnlyList<string> Taunts { get; }
 
+    /// <summary>
+    /// The most swings this character ever needs to clear a bag. When set, the game guarantees the
+    /// character finds a club with every swing it cannot afford to waste, so a full course is always
+    /// cleared within the cap — the closer's promise that separates the GOAT from the field.
+    /// </summary>
+    public int? SwingCap { get; }
+
     public IAiPlayer CreateStrategy(Random random) => StrategyFactory(random);
 }
 
@@ -61,7 +70,8 @@ public static class GolfCharacters
         avatar: "\U0001F405",
         strategyFactory: random => new HuntTargetAi("Tiger Woods", random, AiSkill.Tour),
         expectedWinRate: 0.80,
-        taunts: new[] { "That's how you strike a ball.", "Textbook. Next hole." });
+        taunts: new[] { "That's how you strike a ball.", "Textbook. Next hole." },
+        swingCap: 40);
 
     public static GolfCharacter JordanSpieth { get; } = new(
         name: "Jordan Spieth",

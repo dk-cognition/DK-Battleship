@@ -201,6 +201,40 @@ public class GameTests
         Assert.True(game.IsOver);
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(7)]
+    [InlineData(42)]
+    [InlineData(99)]
+    [InlineData(123)]
+    [InlineData(2026)]
+    public void TigerWoods_ClearsThePlayersBagInAtMostFortySwings(int seed)
+    {
+        var game = new Game(GolfCharacters.TigerWoods, random: new Random(seed));
+        game.RandomizePlayerShips();
+        var guard = 0;
+
+        while (!game.IsOver && guard++ < 500)
+        {
+            if (game.Status == GameStatus.PlayerTurn)
+            {
+                // A weak player sweeping in reading order, so Tiger has to do the closing.
+                var untried = Enumerable.Range(0, 10)
+                    .SelectMany(r => Enumerable.Range(0, 10).Select(c => new Coordinate(r, c)))
+                    .First(c => game.AiBoard[c] is CellState.Empty or CellState.Ship);
+                game.PlayerFire(untried);
+            }
+
+            if (game.Status == GameStatus.AiTurn)
+            {
+                game.AiFire();
+            }
+        }
+
+        Assert.Equal(GameStatus.AiWon, game.Status);
+        Assert.True(game.AiSwings <= 40, $"Tiger needed {game.AiSwings} swings (seed {seed})");
+    }
+
     [Fact]
     public void Characters_SeedRosterExposesDistinctStrategies()
     {
