@@ -7,8 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.3.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.30" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.30" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- The debugging log lives at the repo root; embedding it keeps one copy and one code path for dev and published builds. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\DEBUGGING.md" LogicalName="DEBUGGING.md" />
   </ItemGroup>
 
   <ItemGroup>

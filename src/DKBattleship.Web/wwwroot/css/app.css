@@ -481,6 +481,99 @@ button.tee.sound-toggle:hover {
     content: var(--blazor-load-percentage-text, "Walking to the first tee...");
 }
 
+.debug-log-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px dashed var(--sand-dark);
+    padding-bottom: .6rem;
+}
+
+.debug-log-head a, .debug-log-back a {
+    font-family: var(--arcade);
+    font-size: .55rem;
+    text-transform: uppercase;
+}
+
+.debug-log-back {
+    margin-bottom: 0;
+    border-top: 2px dashed var(--sand-dark);
+    padding-top: .8rem;
+}
+
+.markdown {
+    line-height: 1.7;
+}
+
+.markdown h1, .markdown h2, .markdown h3, .markdown h4 {
+    margin-top: 1.6rem;
+    color: var(--fairway-dark);
+}
+
+.markdown h1 {
+    font-family: var(--arcade);
+    font-size: 1.1rem;
+    text-shadow: none;
+}
+
+.markdown h4 {
+    font-family: var(--arcade);
+    font-size: .75rem;
+}
+
+.markdown code {
+    font-size: .85em;
+    overflow-wrap: anywhere;
+    background: var(--sky);
+    border-radius: 3px;
+    padding: .1em .35em;
+}
+
+.markdown pre {
+    background: var(--rough);
+    color: var(--sky);
+    border-radius: 10px;
+    padding: .9rem 1rem;
+    overflow-x: auto;
+}
+
+.markdown pre code {
+    background: none;
+    padding: 0;
+}
+
+.markdown table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+}
+
+.markdown th, .markdown td {
+    border: 1px solid var(--sand-dark);
+    padding: .4rem .6rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.markdown th {
+    background: var(--sky);
+}
+
+.markdown blockquote {
+    margin: 1rem 0;
+    padding: .1rem 1rem;
+    border-left: 4px solid var(--fairway);
+    background: rgba(47, 125, 79, .06);
+}
+
+.markdown hr {
+    border: none;
+    border-top: 2px dashed var(--sand-dark);
+    margin: 1.75rem 0;
+}
+
 #blazor-error-ui {
     background: var(--sand);
     bottom: 0;
