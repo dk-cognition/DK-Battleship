@@ -143,8 +143,9 @@ public class Game
             throw new InvalidOperationException($"It is not {Opponent.Name}'s turn (status: {Status}).");
         }
 
-        var view = new BoardView(PlayerBoard);
-        var coordinate = Ai.NextShot(view);
+        var coordinate = MustHitToStayUnderCap()
+            ? PickGuaranteedHit()
+            : Ai.NextShot(new BoardView(PlayerBoard));
         var ship = PlayerBoard.ShipAt(coordinate);
         var result = PlayerBoard.ReceiveShot(coordinate);
         Ai.RecordResult(coordinate, result, result == ShotResult.Sunk ? ship!.Size : 0);
@@ -169,5 +170,32 @@ public class Game
         }
 
         return new AiShot(coordinate, result, ship?.Name);
+    }
+
+    /// <summary>
+    /// True when the opponent's <see cref="GolfCharacter.SwingCap"/> leaves no room for another miss:
+    /// there are at least as many club cells left standing as swings left under the cap, so every
+    /// remaining swing has to connect.
+    /// </summary>
+    private bool MustHitToStayUnderCap()
+    {
+        if (Opponent.SwingCap is not int cap)
+        {
+            return false;
+        }
+
+        var cellsLeft = PlayerBoard.Ships.Sum(s => s.Size - s.Hits.Count);
+        return cellsLeft >= cap - AiSwings;
+    }
+
+    /// <summary>A certain hit: finishes a wounded club first so the closing run reads naturally.</summary>
+    private Coordinate PickGuaranteedHit()
+    {
+        var club = PlayerBoard.Ships
+            .Where(s => !s.IsSunk)
+            .OrderByDescending(s => s.Hits.Count > 0)
+            .First();
+        var cells = club.Coordinates.Where(c => PlayerBoard[c] == CellState.Ship).ToList();
+        return cells[_random.Next(cells.Count)];
     }
 }
