@@ -362,15 +362,21 @@ button.tee.sound-toggle:hover {
     flex: 1 1 340px;
 }
 
+/* The opponent's header swaps between "your swing" and the longer "wait for the group
+   ahead". Keeping that label on its own unwrappable line means the header height no
+   longer depends on whose turn it is, so the grid below never moves mid-match; the
+   reserved height also keeps both columns level. */
 .board-wrap h3 {
     display: flex;
-    align-items: baseline;
-    gap: .5rem;
+    flex-direction: column;
+    gap: .1rem;
+    min-height: calc(1.35em + .1rem + 1.35 * .8em);
 }
 
 .board-wrap h3 small {
     font-weight: 500;
     opacity: .7;
+    white-space: nowrap;
 }
 
 .grid {
