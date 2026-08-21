@@ -438,6 +438,65 @@ button.tee.sound-toggle:hover {
     color: var(--rough);
 }
 
+/* A club going in the hole: each of its cells flashes and throws a splash ring outwards.
+   The ring is drawn in an overflowing pseudo-element so the grid itself never moves. */
+.cell.sinking {
+    position: relative;
+    animation: sink-flash .55s ease-out 2 both;
+    z-index: 1;
+}
+
+.cell.sinking::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--white);
+    animation: sink-splash 1.2s ease-out both;
+    pointer-events: none;
+}
+
+@keyframes sink-flash {
+    0% {
+        background: var(--white);
+        transform: scale(1.18);
+    }
+
+    100% {
+        background: var(--flag);
+        transform: scale(1);
+    }
+}
+
+@keyframes sink-splash {
+    0% {
+        opacity: .95;
+        transform: scale(.35);
+    }
+
+    70% {
+        opacity: .45;
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(2.4);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cell.sinking {
+        animation: none;
+        outline: 2px solid var(--white);
+        outline-offset: -2px;
+    }
+
+    .cell.sinking::after {
+        animation: none;
+        opacity: 0;
+    }
+}
+
 .cell.preview {
     background: #7bbf92;
 }
